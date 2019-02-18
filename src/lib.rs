@@ -148,6 +148,7 @@ pub mod constants;
 pub mod ecdh;
 pub mod ffi;
 pub mod key;
+pub mod schnorrsig;
 
 pub use key::SecretKey;
 pub use key::PublicKey;
