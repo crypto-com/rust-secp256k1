@@ -90,7 +90,7 @@ impl str::FromStr for PublicKey {
 }
 
 #[cfg(any(test, feature = "rand"))]
-fn random_32_bytes<R: Rng>(rng: &mut R) -> [u8; 32] {
+pub fn random_32_bytes<R: Rng>(rng: &mut R) -> [u8; 32] {
     let mut ret = [0u8; 32];
     rng.fill_bytes(&mut ret);
     ret
@@ -383,6 +383,35 @@ impl<'de> ::serde::Deserialize<'de> for PublicKey {
         let sl: &[u8] = ::serde::Deserialize::deserialize(d)?;
         PublicKey::from_slice(sl).map_err(D::Error::custom)
     }
+}
+
+/// MuSig: Public key hash
+pub struct PublicKeyHash([u8; constants::PK_HASH_SIZE]);
+impl_array_newtype!(PublicKeyHash, u8, constants::PK_HASH_SIZE);
+impl_pretty_debug!(PublicKeyHash);
+
+/// MuSig: Computes a combined public key and the hash of the given public keys
+pub fn pubkey_combine<C: Verification>(secp: &Secp256k1<C>, 
+                                       pubkeys: &[PublicKey])
+                                       -> Result<(PublicKey, PublicKeyHash), Error> {
+    let mut pk_hash32 = [0u8; constants::PK_HASH_SIZE];
+    let pks: Vec<ffi::PublicKey> = pubkeys.iter().map(|x| x.0).collect();
+    // currently uses an inefficient algorithm; TODO: utilize scratch space
+    unsafe {
+        let mut combined_pk = ffi::PublicKey::blank();
+        let res = ffi::secp256k1_musig_pubkey_combine(
+            secp.ctx,
+            std::ptr::null_mut(),
+            &mut combined_pk,
+            pk_hash32.as_mut_ptr(),
+            pks.as_ptr(),
+            pks.len());
+        if res == 1 {
+            Ok((PublicKey::from(combined_pk), PublicKeyHash(pk_hash32)))
+        } else {
+            Err(InvalidPublicKey)
+        }
+    }       
 }
 
 #[cfg(test)]

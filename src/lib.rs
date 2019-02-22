@@ -149,6 +149,7 @@ pub mod ecdh;
 pub mod ffi;
 pub mod key;
 pub mod schnorrsig;
+pub mod musig;
 
 pub use key::SecretKey;
 pub use key::PublicKey;

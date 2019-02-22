@@ -1,6 +1,6 @@
 [package]
 
-name = "secp256k1"
+name = "secp256k1zkp"
 version = "0.12.2"
 authors = [ "Dawid Ciężarkiewicz <dpc@ucore.info>",
             "Andrew Poelstra <apoelstra@wpsoftware.net>" ]
@@ -8,7 +8,7 @@ license = "CC0-1.0"
 homepage = "https://github.com/rust-bitcoin/rust-secp256k1/"
 repository = "https://github.com/rust-bitcoin/rust-secp256k1/"
 documentation = "https://docs.rs/secp256k1/"
-description = "Rust bindings for Pieter Wuille's `libsecp256k1` library. Implements ECDSA for the SECG elliptic curve group secp256k1 and related utilities."
+description = "Rust bindings for Pieter Wuille's `libsecp256k1` library; linked against an experimental secp256k1-zkp fork with support for Schnorr signature, MuSig multisignatures etc. Implements ECDSA for the SECG elliptic curve group secp256k1 and related utilities."
 keywords = [ "crypto", "ECDSA", "secp256k1", "libsecp256k1", "bitcoin" ]
 readme = "README.md"
 build = "build.rs"
@@ -36,7 +36,7 @@ serde_test = "1.0"
 
 [dependencies.rand]
 version = "0.4"
-optional = true
+optional = false
 
 [dependencies.serde]
 version = "1.0"

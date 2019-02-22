@@ -105,7 +105,8 @@ impl SchnorrSignature {
     }
 }
 
-type NonceIsNegated = bool;
+/// Denotes if the algorithm negated the nonce
+pub type NonceIsNegated = bool;
 
 /// Constructs a Schnorr signature for `msg` using the secret key `sk` and BIP Schnorr nonce.
 /// Requires a signing-capable context.
@@ -128,6 +129,7 @@ pub fn schnorr_sign<C: Signing>(secp: &Secp256k1<C>, msg: &Message, sk: &key::Se
 /// Checks that `sig` is a valid Schnorr signature for `msg` using the public
 /// key `pubkey`. Returns `Ok(true)` on success.
 /// Requires a verify-capable context.
+/// TODO: batch verification
 #[inline]
 pub fn schnorr_verify<C: Verification>(secp: &Secp256k1<C>, 
                                        msg: &Message,
