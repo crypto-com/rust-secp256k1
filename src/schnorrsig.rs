@@ -52,7 +52,7 @@ impl ::serde::Serialize for SchnorrSignature {
 
 #[cfg(feature = "serde")]
 impl<'de> ::serde::Deserialize<'de> for SchnorrSignature {
-    fn deserialize<D: ::serde::Deserializer<'de>>(d: D) -> Result<Signature, D::Error> {
+    fn deserialize<D: ::serde::Deserializer<'de>>(d: D) -> Result<SchnorrSignature, D::Error> {
         use ::serde::de::Error;
 
         let sl: &[u8] = ::serde::Deserialize::deserialize(d)?;
