@@ -46,7 +46,7 @@ impl From<ffi::SchnorrSignature> for SchnorrSignature {
 #[cfg(feature = "serde")]
 impl ::serde::Serialize for SchnorrSignature {
     fn serialize<S: ::serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        s.serialize_bytes(&self.serialize_der())
+        s.serialize_bytes(&self.serialize_default())
     }
 }
 
