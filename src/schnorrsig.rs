@@ -44,19 +44,19 @@ impl From<ffi::SchnorrSignature> for SchnorrSignature {
 
 
 #[cfg(feature = "serde")]
-impl ::serde::Serialize for SchorrSignature {
+impl ::serde::Serialize for SchnorrSignature {
     fn serialize<S: ::serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         s.serialize_bytes(&self.serialize_der())
     }
 }
 
 #[cfg(feature = "serde")]
-impl<'de> ::serde::Deserialize<'de> for SchorrSignature {
+impl<'de> ::serde::Deserialize<'de> for SchnorrSignature {
     fn deserialize<D: ::serde::Deserializer<'de>>(d: D) -> Result<Signature, D::Error> {
         use ::serde::de::Error;
 
         let sl: &[u8] = ::serde::Deserialize::deserialize(d)?;
-        SchorrSignature::from_default(sl).map_err(D::Error::custom)
+        SchnorrSignature::from_default(sl).map_err(D::Error::custom)
     }
 }
 
