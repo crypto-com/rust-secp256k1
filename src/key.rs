@@ -33,9 +33,16 @@ impl_array_newtype!(SecretKey, u8, constants::SECRET_KEY_SIZE);
 impl_pretty_debug!(SecretKey);
 
 #[cfg(feature = "zeroize")]
+impl Zeroize for SecretKey {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+#[cfg(feature = "zeroize")]
 impl Drop for SecretKey {
     fn drop(&mut self) {
-        self.0.zeroize();
+        self.zeroize();
     }
 }
 
