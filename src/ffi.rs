@@ -19,6 +19,7 @@
 use std::mem;
 use std::hash;
 use std::os::raw::{c_int, c_uchar, c_uint, c_void};
+#[cfg(feature = "zeroize")] use zeroize::Zeroize;
 
 /// Flag for context to enable no precomputation
 pub const SECP256K1_START_NONE: c_uint = (1 << 0) | 0;
@@ -63,6 +64,7 @@ pub type EcdhHashFn = unsafe extern "C" fn(
 
 /// Library-internal representation of a Secp256k1 public key
 #[repr(C)]
+#[cfg_attr(feature = "zeroize", derive(Copy))]
 pub struct PublicKey([c_uchar; 64]);
 impl_array_newtype!(PublicKey, c_uchar, 64);
 impl_raw_debug!(PublicKey);
@@ -153,6 +155,15 @@ pub struct MuSigSession {
     nonce: PublicKey,
     nonce_commitments_hash: [c_uchar; 32],
     nonce_commitments_hash_is_set: c_int
+}
+
+#[cfg(feature = "zeroize")]
+impl Zeroize for MuSigSession {
+    fn zeroize(&mut self) {
+        self.seckey.zeroize();
+        self.secnonce.zeroize();
+        // TODO: call musig ffi destructs when available
+    }
 }
 
 impl MuSigSession {

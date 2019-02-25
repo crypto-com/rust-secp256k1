@@ -403,7 +403,7 @@ pub fn pubkey_combine<C: Verification>(secp: &Secp256k1<C>,
                                        pubkeys: &[PublicKey])
                                        -> Result<(PublicKey, PublicKeyHash), Error> {
     let mut pk_hash32 = [0u8; constants::PK_HASH_SIZE];
-    let pks: Vec<ffi::PublicKey> = pubkeys.iter().map(|x| x.0).collect();
+    let pks: Vec<ffi::PublicKey> = pubkeys.iter().map(|x| x.0.clone()).collect();
     // currently uses an inefficient algorithm; TODO: utilize scratch space
     unsafe {
         let mut combined_pk = ffi::PublicKey::blank();

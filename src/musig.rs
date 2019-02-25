@@ -77,7 +77,8 @@ impl Drop for MuSigSessionID {
 
 /// A MuSig partial signature
 /// TODO: serialization / deserialization
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct MuSigPartialSignature(ffi::MuSigPartialSignature);
 
 impl MuSigSessionID {
@@ -175,7 +176,7 @@ impl<'a, C> MuSigSession<'a, C> {
 
     /// Retrieves the signer's nonce commitment (available after initialization)
     pub fn get_my_nonce_commitment(&self) -> MuSigNonceCommitment {
-        self.nonce_commitments[self.my_index]
+        self.nonce_commitments[self.my_index].clone()
     }
 
     /// Sets all nonce commitments (during the nonce commitment exchange phase)
@@ -299,7 +300,7 @@ impl<'a, C> MuSigSession<'a, C> {
     pub fn partial_sig_combine(&self,
                               signatures: &[MuSigPartialSignature])
                               -> Result<SchnorrSignature, Error> {
-        let sigs: Vec<ffi::MuSigPartialSignature> = signatures.iter().map(|x| x.0).collect();
+        let sigs: Vec<ffi::MuSigPartialSignature> = signatures.iter().map(|x| x.0.clone()).collect();
         unsafe {
             let mut sig = ffi::SchnorrSignature::blank();
             let ret = ffi::secp256k1_musig_partial_sig_combine(
@@ -322,8 +323,7 @@ impl<'a, C> MuSigSession<'a, C> {
 #[cfg(feature = "zeroize")]
 impl<'a, C> Drop for MuSigSession<'a, C> {
     fn drop(&mut self) {
-        self.session.seckey.zeroize();
-        self.session.secnonce.zeroize();
+        self.session.zeroize();
         // TODO: call musig ffi destructs when available
     }
 }

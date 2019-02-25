@@ -4,7 +4,8 @@ use super::{Error, from_hex, ffi, Signing, Verification, Secp256k1, Message, key
 use std::{fmt, str, ptr};
 
 /// A Schnorr signature
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct SchnorrSignature(ffi::SchnorrSignature);
 
 impl fmt::Debug for SchnorrSignature {
@@ -41,7 +42,6 @@ impl From<ffi::SchnorrSignature> for SchnorrSignature {
         SchnorrSignature(sig)
     }
 }
-
 
 #[cfg(feature = "serde")]
 impl ::serde::Serialize for SchnorrSignature {

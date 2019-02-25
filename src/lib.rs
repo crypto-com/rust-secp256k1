@@ -161,7 +161,8 @@ use std::marker::PhantomData;
 pub struct RecoveryId(i32);
 
 /// An ECDSA signature
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct Signature(ffi::Signature);
 
 impl fmt::Debug for Signature {
@@ -202,7 +203,8 @@ fn from_str(s: &str) -> Result<Signature, Error> {
 }
 
 /// An ECDSA signature with a recovery ID for pubkey recovery
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct RecoverableSignature(ffi::RecoverableSignature);
 
 /// Trait describing something that promises to be a 32-byte random number; in particular,

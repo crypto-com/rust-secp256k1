@@ -16,6 +16,7 @@
 // This is a macro that routinely comes in handy
 macro_rules! impl_array_newtype {
     ($thing:ident, $ty:ty, $len:expr) => {
+        #[cfg(not(feature = "zeroize"))]
         impl Copy for $thing {}
 
         impl $thing {
