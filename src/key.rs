@@ -16,6 +16,7 @@
 //! # Public and secret keys
 
 #[cfg(any(test, feature = "rand"))] use rand::Rng;
+#[cfg(feature = "zeroize")] use zeroize::Zeroize;
 
 use std::{fmt, mem, str};
 
@@ -30,6 +31,13 @@ use ffi;
 pub struct SecretKey([u8; constants::SECRET_KEY_SIZE]);
 impl_array_newtype!(SecretKey, u8, constants::SECRET_KEY_SIZE);
 impl_pretty_debug!(SecretKey);
+
+#[cfg(feature = "zeroize")]
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl fmt::Display for SecretKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

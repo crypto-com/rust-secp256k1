@@ -6,6 +6,7 @@ use super::{ffi, Secp256k1, key::PublicKey,
 use std::{fmt, error, ptr};
 #[cfg(any(test, feature = "rand"))] use rand::Rng;
 #[cfg(any(test, feature = "rand"))] use super::key;
+#[cfg(feature = "zeroize")] use zeroize::Zeroize;
 
 /// A MuSig error
 #[derive(Copy, PartialEq, Eq, Clone, Debug)]
@@ -66,6 +67,13 @@ impl_pretty_debug!(MuSigNonceCommitment);
 pub struct MuSigSessionID([u8; constants::SESSION_ID_SIZE]);
 impl_array_newtype!(MuSigSessionID, u8, constants::SESSION_ID_SIZE);
 impl_pretty_debug!(MuSigSessionID);
+
+#[cfg(feature = "zeroize")]
+impl Drop for MuSigSessionID {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 /// A MuSig partial signature
 /// TODO: serialization / deserialization
@@ -311,9 +319,12 @@ impl<'a, C> MuSigSession<'a, C> {
 
 }
 
+#[cfg(feature = "zeroize")]
 impl<'a, C> Drop for MuSigSession<'a, C> {
     fn drop(&mut self) {
-    // TODO: zeroize / call musig ffi destructs when available
+        self.session.seckey.zeroize();
+        self.session.secnonce.zeroize();
+        // TODO: call musig ffi destructs when available
     }
 }
 

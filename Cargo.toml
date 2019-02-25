@@ -15,7 +15,7 @@ build = "build.rs"
 
 # Should make docs.rs show all functions, even those behind non-default features
 [package.metadata.docs.rs]
-features = [ "rand", "serde" ]
+features = [ "rand", "serde", "zeroize" ]
 all-features = true
 
 [build-dependencies]
@@ -41,3 +41,7 @@ optional = false
 [dependencies.serde]
 version = "1.0"
 optional = true
+
+[dependencies.zeroize]
+version = "0.5"
+optional = false

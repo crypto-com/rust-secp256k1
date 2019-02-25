@@ -141,6 +141,7 @@
 
 use std::{error, fmt, ptr, str};
 #[cfg(any(test, feature = "rand"))] use rand::Rng;
+#[cfg(feature = "zeroize")] pub extern crate zeroize;
 
 #[macro_use]
 mod macros;
