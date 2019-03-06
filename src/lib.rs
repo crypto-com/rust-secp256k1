@@ -136,6 +136,7 @@
 #![cfg_attr(all(test, feature = "unstable"), feature(test))]
 #[cfg(all(test, feature = "unstable"))] extern crate test;
 #[cfg(any(test, feature = "rand"))] pub extern crate rand;
+#[cfg(any(test))] extern crate rand_core;
 #[cfg(feature = "serde")] pub extern crate serde;
 #[cfg(all(test, feature = "serde"))] extern crate serde_test;
 
@@ -227,7 +228,7 @@ pub fn from_i32(id: i32) -> Result<RecoveryId, Error> {
 
 #[inline]
 /// Allows library users to convert recovery IDs to i32.
-pub fn to_i32(&self) -> i32 {
+pub fn to_i32(self) -> i32 {
     self.0
 }
 }
@@ -478,7 +479,7 @@ impl Message {
     /// Converts a `MESSAGE_SIZE`-byte slice to a message object
     #[inline]
     pub fn from_slice(data: &[u8]) -> Result<Message, Error> {
-        if data == &[0; constants::MESSAGE_SIZE] {
+        if data == [0; constants::MESSAGE_SIZE] {
             return Err(Error::InvalidMessage);
         }
 
@@ -621,6 +622,12 @@ impl Secp256k1<All> {
     }
 }
 
+impl Default for Secp256k1<All> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Secp256k1<SignOnly> {
     /// Creates a new Secp256k1 context that can only be used for signing
     pub fn signing_only() -> Secp256k1<SignOnly> {
@@ -636,6 +643,14 @@ impl Secp256k1<VerifyOnly> {
 }
 
 impl<C> Secp256k1<C> {
+
+    /// Getter for the raw pointer to the underlying secp256k1 context. This
+    /// shouldn't be needed with normal usage of the library. It enables
+    /// extending the Secp256k1 with more cryptographic algorithms outside of
+    /// this crate.
+    pub fn ctx(&self) -> &*mut ffi::Context {
+        &self.ctx
+    }
 
     /// (Re)randomizes the Secp256k1 context for cheap sidechannel resistance;
     /// see comment in libsecp256k1 commit d2275795f by Gregory Maxwell. Requires
@@ -783,7 +798,7 @@ fn from_hex(hex: &str, target: &mut [u8]) -> Result<usize, ()> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{Rng, thread_rng};
+    use rand::{RngCore, thread_rng};
     use std::str::FromStr;
 
     use key::{SecretKey, PublicKey};
@@ -1232,4 +1247,3 @@ mod benches {
         });
     }
 }
-

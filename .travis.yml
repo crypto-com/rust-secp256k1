@@ -5,18 +5,18 @@ rust:
   - stable
   - beta
   - nightly
-  - 1.14.0
+  - 1.22.0
 os:
  - linux
  - windows
 
 matrix:
-  # rand 0.4 actually needs Rust 1.22, which leads to build failures on Rust 1.14 on Windows.
-  # This is not a problem, because
-  #  - we insist on rust 1.14 only for Debian, and
-  #  - "rand" is only an optional dependency.
+  # rand 0.6 actually needs Rust 1.22, which leads to build failures on Rust 1.14 on Windows.
+  # This is a problem, because
+  #  - we insist on rust 1.22 since #92
+  #  - but "rand" is only an optional dependency.
   exclude:
-  - rust: 1.14.0
+  - rust: 1.22.0
     os: windows
 
 script:
@@ -30,3 +30,4 @@ script:
   - cargo test --release
   - cargo bench
   - if [ "$(rustup show | grep default | grep stable)" != "" ]; then cargo doc; fi
+  - if [ "$(rustup show | grep default | grep stable)" != "" -a "$TRAVIS_OS_NAME" = "linux" ]; then cargo install --force cargo-web && cargo web build --target=asmjs-unknown-emscripten && cargo web test --target=asmjs-unknown-emscripten --nodejs; fi

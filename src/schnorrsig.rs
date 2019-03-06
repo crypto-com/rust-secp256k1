@@ -147,7 +147,7 @@ pub fn schnorr_verify<C: Verification>(secp: &Secp256k1<C>,
 
 #[cfg(test)]
 mod tests {
-    use rand::{Rng, thread_rng};
+    use rand::{RngCore, thread_rng};
     use super::{Secp256k1, SchnorrSignature, schnorr_verify, schnorr_sign, Message,
     key::{SecretKey, PublicKey}, NonceIsNegated};
 

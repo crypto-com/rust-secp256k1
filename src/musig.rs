@@ -330,7 +330,7 @@ impl<'a, C> Drop for MuSigSession<'a, C> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{Rng, thread_rng};
+    use rand::{RngCore, thread_rng};
     use key::pubkey_combine;
     use schnorrsig::schnorr_verify;
     use super::{Secp256k1, MuSigSessionID, MuSigSession, 
