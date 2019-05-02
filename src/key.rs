@@ -105,7 +105,7 @@ impl str::FromStr for PublicKey {
 }
 
 #[cfg(any(test, feature = "rand"))]
-fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
+pub fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
     let mut ret = [0u8; 32];
     rng.fill_bytes(&mut ret);
     ret
