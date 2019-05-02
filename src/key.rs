@@ -105,7 +105,7 @@ impl str::FromStr for PublicKey {
 }
 
 #[cfg(any(test, feature = "rand"))]
-pub fn random_32_bytes<R: Rng>(rng: &mut R) -> [u8; 32] {
+fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
     let mut ret = [0u8; 32];
     rng.fill_bytes(&mut ret);
     ret
@@ -115,7 +115,7 @@ impl SecretKey {
     /// Creates a new random secret key. Requires compilation with the "rand" feature.
     #[inline]
     #[cfg(any(test, feature = "rand"))]
-    pub fn new<R: Rng>(rng: &mut R) -> SecretKey {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> SecretKey {
         let mut data = random_32_bytes(rng);
         unsafe {
             while ffi::secp256k1_ec_seckey_verify(
@@ -228,10 +228,16 @@ impl<'de> ::serde::Deserialize<'de> for SecretKey {
 }
 
 impl PublicKey {
-    /// Obtains a raw pointer suitable for use with FFI functions
+    /// Obtains a raw const pointer suitable for use with FFI functions
     #[inline]
     pub fn as_ptr(&self) -> *const ffi::PublicKey {
         &self.0 as *const _
+    }
+
+    /// Obtains a raw mutable pointer suitable for use with FFI functions
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut ffi::PublicKey {
+        &mut self.0 as *mut _
     }
 
     /// Creates a new public key from a secret key.
