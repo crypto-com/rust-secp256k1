@@ -63,6 +63,20 @@ pub struct MuSigNonceCommitment([u8; constants::COMMITMENT_SIZE]);
 impl_array_newtype!(MuSigNonceCommitment, u8, constants::COMMITMENT_SIZE);
 impl_pretty_debug!(MuSigNonceCommitment);
 
+impl MuSigNonceCommitment {
+    /// Serializes nonce commitment into array
+    #[inline]
+    pub fn serialize(&self) -> [u8; constants::COMMITMENT_SIZE] {
+        self.0
+    }
+
+    /// Deserializes array into nonce commitment
+    #[inline]
+    pub fn deserialize_from(array: [u8; constants::COMMITMENT_SIZE]) -> Self {
+        Self(array)
+    }
+}
+
 /// *unique* session ID in MuSig sessions
 pub struct MuSigSessionID([u8; constants::SESSION_ID_SIZE]);
 impl_array_newtype!(MuSigSessionID, u8, constants::SESSION_ID_SIZE);
@@ -76,10 +90,44 @@ impl Drop for MuSigSessionID {
 }
 
 /// A MuSig partial signature
-/// TODO: serialization / deserialization
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct MuSigPartialSignature(ffi::MuSigPartialSignature);
+
+impl MuSigPartialSignature {
+    /// Serializes multi-sig partial signature into array
+    pub fn serialize(&self) -> [u8; constants::MUSIG_PARTIAL_SIGNATURE_SIZE] {
+        let mut ret = [0; constants::MUSIG_PARTIAL_SIGNATURE_SIZE];
+
+        unsafe {
+            let err = ffi::secp256k1_musig_partial_signature_serialize(
+                ffi::secp256k1_context_no_precomp,
+                ret.as_mut_ptr(),
+                &self.0 as *const ffi::MuSigPartialSignature,
+            );
+            debug_assert_eq!(err, 1);
+        }
+
+        ret
+    }
+
+    /// Deserializes array into multi-sig partial signature
+    pub fn deserialize_from(array: [u8; constants::MUSIG_PARTIAL_SIGNATURE_SIZE]) -> Result<Self, Error> {
+        let mut sig = unsafe { ffi::MuSigPartialSignature::blank() };
+
+        unsafe {
+            if ffi::secp256k1_musig_partial_signature_parse(
+                ffi::secp256k1_context_no_precomp,
+                &mut sig,
+                array.as_ptr(),
+            ) == 1 {
+                Ok(Self(sig))
+            } else {
+                Err(Error::PartialSignatureConstructionFailed)
+            }
+        }
+    }
+}
 
 impl MuSigSessionID {
     /// Creates a new random session ID. Requires compilation with the "rand" feature.
@@ -403,6 +451,10 @@ mod tests {
         }
         let signatures: Vec<MuSigPartialSignature> = 
             partial_sigs.iter().map(|x| x.unwrap()).collect();
+
+        let new_signature = MuSigPartialSignature::deserialize_from(signatures[0].serialize()).unwrap();
+        assert_eq!(signatures[0], new_signature);
+        
         let combined_pk = pubkey_combine(&full, &pks).unwrap().0;
         for session in sessions.iter() {
             for i in 0..signatures.len() {
