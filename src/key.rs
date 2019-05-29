@@ -405,6 +405,20 @@ pub struct PublicKeyHash([u8; constants::PK_HASH_SIZE]);
 impl_array_newtype!(PublicKeyHash, u8, constants::PK_HASH_SIZE);
 impl_pretty_debug!(PublicKeyHash);
 
+impl PublicKeyHash {
+    /// Serializes public key hash into array
+    #[inline]
+    pub fn serialize(&self) -> [u8; constants::PK_HASH_SIZE] {
+        self.0
+    }
+
+    /// Deserializes array into public key hash
+    #[inline]
+    pub fn deserialize_from(array: [u8; constants::PK_HASH_SIZE]) -> Self {
+        Self(array)
+    }
+}
+
 /// MuSig: Computes a combined public key and the hash of the given public keys
 pub fn pubkey_combine<C: Verification>(secp: &Secp256k1<C>, 
                                        pubkeys: &[PublicKey])
