@@ -66,3 +66,6 @@ pub const SESSION_ID_SIZE: usize = 32;
 
 /// The size (in bytes) of a combined public key hash
 pub const PK_HASH_SIZE: usize = 32;
+
+/// The size (in bytes) of a multi-sig partial signature
+pub const MUSIG_PARTIAL_SIGNATURE_SIZE: usize = 32;
