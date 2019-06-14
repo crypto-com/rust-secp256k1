@@ -73,7 +73,8 @@ pub const ONE_KEY: SecretKey = SecretKey([0, 0, 0, 0, 0, 0, 0, 0,
                                           0, 0, 0, 0, 0, 0, 0, 1]);
 
 /// A Secp256k1 public key, used for verification of signatures
-#[derive(Copy, Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct PublicKey(ffi::PublicKey);
 
 impl fmt::Display for PublicKey {

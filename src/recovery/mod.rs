@@ -31,7 +31,7 @@ mod ffi;
 pub struct RecoveryId(i32);
 
 /// An ECDSA signature with a recovery ID for pubkey recovery
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RecoverableSignature(ffi::RecoverableSignature);
 
 impl RecoveryId {
