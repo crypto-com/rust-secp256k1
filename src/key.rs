@@ -404,6 +404,7 @@ impl PublicKeyHash {
 }
 
 /// MuSig: Computes a combined public key and the hash of the given public keys
+#[cfg(feature = "musig")]
 pub fn pubkey_combine<C: Verification>(secp: &Secp256k1<C>, 
                                        pubkeys: &[PublicKey])
                                        -> Result<(PublicKey, PublicKeyHash), Error> {

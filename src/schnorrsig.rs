@@ -1,7 +1,7 @@
 //! # Schnorr signatures compliant with BIP-schnorr
 
 use super::{Error, from_hex, ffi, Signing, Verification, Secp256k1, Message, key};
-use std::{fmt, str, ptr};
+use core::{fmt, str, ptr};
 
 /// A Schnorr signature
 #[derive(Clone, PartialEq, Eq)]
@@ -114,7 +114,9 @@ pub fn schnorr_sign<C: Signing>(secp: &Secp256k1<C>, msg: &Message, sk: &key::Se
                     -> (SchnorrSignature, NonceIsNegated) {
 
     let mut ret = unsafe { ffi::SchnorrSignature::blank() };
-    let mut nonce_is_negated: std::os::raw::c_int = 0;
+    // std::os::raw::c_int
+    // WARNING: upstream API may be different: https://github.com/bitcoin-core/secp256k1/pull/589
+    let mut nonce_is_negated: i32 = 0;
 
     unsafe {
         // We can assume the return value because it's not possible to construct

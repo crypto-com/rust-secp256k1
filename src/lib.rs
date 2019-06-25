@@ -154,6 +154,7 @@ pub mod ecdh;
 pub mod ffi;
 pub mod key;
 pub mod schnorrsig;
+#[cfg(feature = "musig")]
 pub mod musig;
 #[cfg(feature = "recovery")]
 pub mod recovery;
