@@ -117,9 +117,11 @@
 //! to generate a context would simply not compile.
 //!
 
-#![crate_type = "lib"]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
+#![cfg_attr(not(feature = "sgx"), crate_type = "lib")]
+#![cfg_attr(not(feature = "sgx"), crate_type = "rlib")]
+#![cfg_attr(not(feature = "sgx"), crate_type = "dylib")]
+#![cfg_attr(feature = "sgx", crate_type = "staticlib")]
+
 #![crate_name = "secp256k1"]
 
 // Coding conventions

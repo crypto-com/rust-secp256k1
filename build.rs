@@ -53,8 +53,15 @@ fn main() {
                .define("USE_FIELD_INV_BUILTIN", Some("1"))
                .define("USE_SCALAR_INV_BUILTIN", Some("1"))
                .define("ENABLE_MODULE_ECDH", Some("1"))
-               .define("ENABLE_MODULE_SCHNORRSIG", Some("1"))
-               .define("ECMULT_WINDOW_SIZE", Some("15")); // This is the default in the configure file (`auto`)
+               .define("ENABLE_MODULE_SCHNORRSIG", Some("1"));
+
+
+    #[cfg(not(feature = "sgx"))]
+    base_config.define("ECMULT_WINDOW_SIZE", Some("15")); // This is the default in the configure file (`auto`)
+    #[cfg(feature = "sgx")]
+    base_config.define("USE_SGX", Some("1"));
+    #[cfg(feature = "sgx")]
+    base_config.define("ECMULT_WINDOW_SIZE", Some("2")); // smaller memory size
     #[cfg(feature = "musig")]
     base_config.define("ENABLE_MODULE_MUSIG", Some("1"));
     #[cfg(feature = "endomorphism")]
