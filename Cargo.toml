@@ -53,6 +53,6 @@ version = "1.0"
 optional = true
 
 [dependencies.zeroize]
-version = "0.9"
+version = "0.10"
 optional = true
 default-features = false
