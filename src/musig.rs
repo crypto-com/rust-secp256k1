@@ -248,7 +248,8 @@ impl<'a, C> MuSigSession<'a, C> {
                 &self.signers[0],
                 &mut nonce,
                 commitments.as_ptr(),
-                commitments.len()
+                commitments.len(),
+                ptr::null()
             );
             if ret == 1 {
                 Ok(PublicKey::from(nonce))
@@ -356,7 +357,8 @@ impl<'a, C> MuSigSession<'a, C> {
                 &self.session,
                 &mut sig,
                 &sigs[0],
-                sigs.len()
+                sigs.len(),
+                ptr::null() // TODO: ec_pubkey_tweak_add
             );
             if ret == 1 {
                 Ok(SchnorrSignature::from(sig))

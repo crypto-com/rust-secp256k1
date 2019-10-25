@@ -419,7 +419,8 @@ extern "C" {
         signers: *const MuSigSessionSignerData,
         nonce: *mut PublicKey,
         commitments: *const *const c_uchar,
-        n_commitments: usize)
+        n_commitments: usize,
+        msg32: *const c_uchar)
         -> c_int;
 
     pub fn secp256k1_musig_session_initialize_verifier(
@@ -479,7 +480,8 @@ extern "C" {
         session: *const MuSigSession,
         sig: *mut SchnorrSignature,
         partial_sigs: *const MuSigPartialSignature,
-        n_sigs: usize)
+        n_sigs: usize,
+        tweak32: *const c_uchar)
         -> c_int;
 
 }
