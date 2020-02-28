@@ -105,6 +105,36 @@ impl str::FromStr for PublicKey {
     }
 }
 
+/// A Secp256k1 X-only public key, used for verification of Schnorr signatures
+#[derive(Clone, PartialEq, Eq, Debug, PartialOrd, Ord, Hash)]
+#[cfg_attr(not(feature = "zeroize"), derive(Copy))]
+pub struct XOnlyPublicKey(ffi::XOnlyPublicKey);
+
+impl fmt::Display for XOnlyPublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ser = self.serialize();
+        for ch in &ser[..] {
+            write!(f, "{:02x}", *ch)?;
+        }
+        Ok(())
+    }
+}
+
+impl str::FromStr for XOnlyPublicKey {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<XOnlyPublicKey, Error> {
+        let mut res = [0; constants::XONLY_PUBLIC_KEY_SIZE];
+        match from_hex(s, &mut res) {
+            Ok(constants::XONLY_PUBLIC_KEY_SIZE) => {
+                XOnlyPublicKey::from_slice(
+                    &res[0..constants::XONLY_PUBLIC_KEY_SIZE]
+                )
+            }
+            _ => Err(Error::InvalidPublicKey)
+        }
+    }
+}
+
 #[cfg(any(test, feature = "rand"))]
 pub fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
     let mut ret = [0u8; 32];
@@ -383,6 +413,103 @@ impl<'de> ::serde::Deserialize<'de> for PublicKey {
         PublicKey::from_slice(sl).map_err(D::Error::custom)
     }
 }
+
+/// Denotes if the point encoded by `xonly_pubkey` is the negation of `pubkey`
+pub type IsNegated = bool;
+
+impl XOnlyPublicKey {
+
+    /// Obtains a raw const pointer suitable for use with FFI functions
+    #[inline]
+    pub fn as_ptr(&self) -> *const ffi::XOnlyPublicKey {
+        &self.0 as *const _
+    }
+
+    /// Obtains a raw mutable pointer suitable for use with FFI functions
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut ffi::XOnlyPublicKey {
+        &mut self.0 as *mut _
+    }
+
+    /// Creates a new x-only public key from a secret key.
+    #[inline]
+    pub fn from_secret_key<C: Signing>(secp: &Secp256k1<C>,
+                           sk: &SecretKey)
+                           -> XOnlyPublicKey {
+        let mut pk = unsafe { ffi::XOnlyPublicKey::blank() };
+        unsafe {
+            // We can assume the return value because it's not possible to construct
+            // an invalid `SecretKey` without transmute trickery or something
+            let res = ffi::secp256k1_xonly_pubkey_create(secp.ctx, &mut pk, sk.as_ptr());
+            debug_assert_eq!(res, 1);
+        }
+        XOnlyPublicKey(pk)
+    }
+
+    /// Serialize an xonly_pubkey object into a 32-byte sequence.
+    #[inline]
+    pub fn serialize(&self) -> [u8; constants::XONLY_PUBLIC_KEY_SIZE] {
+        let mut ret = [0; constants::XONLY_PUBLIC_KEY_SIZE];
+
+        unsafe {
+            let err = ffi::secp256k1_xonly_pubkey_serialize(
+                ffi::secp256k1_context_no_precomp,
+                ret.as_mut_ptr(),
+                self.as_ptr(),
+            );
+            debug_assert_eq!(err, 1);
+        }
+        ret
+    }
+
+    /// Creates a x-only public key directly from a slice
+    #[inline]
+    pub fn from_slice(data: &[u8]) -> Result<XOnlyPublicKey, Error> {
+        let mut pk = unsafe { ffi::XOnlyPublicKey::blank() };
+        if data.len() != constants::XONLY_PUBLIC_KEY_SIZE {
+            Err(InvalidPublicKey)
+        } else {
+            unsafe {
+                if ffi::secp256k1_xonly_pubkey_parse(
+                    ffi::secp256k1_context_no_precomp,
+                    &mut pk,
+                    data.as_ptr()
+                ) == 1 {
+                    Ok(XOnlyPublicKey(pk))
+                } else {
+                    Err(InvalidPublicKey)
+                }
+            }
+        }
+    }
+
+    /// Creates a x-only public key from a public key
+    #[inline]
+    pub fn from_pubkey(pk: &PublicKey) -> (XOnlyPublicKey, IsNegated) {
+        let mut ret = unsafe { ffi::XOnlyPublicKey::blank() };
+        let mut is_negated: i32 = 0;
+        unsafe {
+            let err = ffi::secp256k1_xonly_pubkey_from_pubkey(
+                ffi::secp256k1_context_no_precomp,
+                &mut ret,
+                &mut is_negated,
+                pk.as_ptr(),
+            );
+            debug_assert_eq!(err, 1);
+        }
+        (XOnlyPublicKey(ret), is_negated == 1)
+    }
+
+}
+
+/// Creates a new x-only public key from a FFI x-only public key
+impl From<ffi::XOnlyPublicKey> for XOnlyPublicKey {
+    #[inline]
+    fn from(pk: ffi::XOnlyPublicKey) -> XOnlyPublicKey {
+        XOnlyPublicKey(pk)
+    }
+}
+
 
 /// MuSig: Public key hash
 pub struct PublicKeyHash([u8; constants::PK_HASH_SIZE]);

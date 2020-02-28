@@ -25,6 +25,9 @@ pub const SECRET_KEY_SIZE: usize = 32;
 /// The size (in bytes) of a serialized public key.
 pub const PUBLIC_KEY_SIZE: usize = 33;
 
+/// The size (in bytes) of a serialized x-only public key.
+pub const XONLY_PUBLIC_KEY_SIZE: usize = 32;
+
 /// The size (in bytes) of an serialized uncompressed public key
 pub const UNCOMPRESSED_PUBLIC_KEY_SIZE: usize = 65;
 

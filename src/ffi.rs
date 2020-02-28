@@ -93,6 +93,31 @@ impl hash::Hash for PublicKey {
     }
 }
 
+/// Library-internal representation of a Secp256k1 "x-only" public key
+#[repr(C)]
+pub struct XOnlyPublicKey([c_uchar; 64]);
+impl_array_newtype!(XOnlyPublicKey, c_uchar, 64);
+impl_raw_debug!(XOnlyPublicKey);
+
+impl XOnlyPublicKey {
+    /// Create a new (zeroed) x-only public key usable for the FFI interface
+    pub fn new() -> XOnlyPublicKey { XOnlyPublicKey([0; 64]) }
+    /// Create a new (uninitialized) x-only public key usable for the FFI interface
+    pub unsafe fn blank() -> XOnlyPublicKey { mem::uninitialized() }
+}
+
+impl Default for XOnlyPublicKey {
+    fn default() -> Self {
+        XOnlyPublicKey::new()
+    }
+}
+
+impl hash::Hash for XOnlyPublicKey {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        state.write(&self.0)
+    }
+}
+
 /// Library-internal representation of a Secp256k1 signature
 #[repr(C)]
 pub struct Signature([c_uchar; 64]);
@@ -364,29 +389,54 @@ extern "C" {
         data: *mut c_void,
     ) -> c_int;
 
+    // x-only pubkey
+    pub fn secp256k1_xonly_pubkey_parse(
+        ctx: *const Context,
+        pubkey: *mut XOnlyPublicKey,
+        input32: *const c_uchar,
+    ) -> c_int;
+
+    pub fn secp256k1_xonly_pubkey_serialize(
+        ctx: *const Context,
+        output32: *mut c_uchar,
+        pubkey: *const XOnlyPublicKey,
+    ) -> c_int;
+
+    pub fn secp256k1_xonly_pubkey_create(
+        ctx: *const Context,
+        pubkey: *mut XOnlyPublicKey,
+        seckey: *const c_uchar,
+    ) -> c_int;
+
+    pub fn secp256k1_xonly_pubkey_from_pubkey(
+        ctx: *const Context,
+        xonly_pubkey: *mut XOnlyPublicKey,
+        is_negated: *mut c_int,
+        pubkey: *const PublicKey,
+    ) -> c_int;
+
     // SchnorrSig
-    pub fn secp256k1_schnorrsig_serialize(cx: *const Context,
-                                          output64: *const c_uchar,
+    pub fn secp256k1_schnorrsig_serialize(ctx: *const Context,
+                                          out64: *mut c_uchar,
                                           sig: *const SchnorrSignature)
                                           -> c_int;
 
-    pub fn secp256k1_schnorrsig_parse(cx: *const Context, sig: *mut SchnorrSignature,
+    pub fn secp256k1_schnorrsig_parse(ctx: *const Context, sig: *mut SchnorrSignature,
                                       input64: *const c_uchar)
                                       -> c_int;
 
-    pub fn secp256k1_schnorrsig_verify(cx: *const Context,
+    pub fn secp256k1_schnorrsig_verify(ctx: *const Context,
                                   sig: *const SchnorrSignature,
                                   msg32: *const c_uchar,
-                                  pk: *const PublicKey)
+                                  pk: *const XOnlyPublicKey)
                                   -> c_int;
 
-    pub fn secp256k1_schnorrsig_sign(cx: *const Context,
+    pub fn secp256k1_schnorrsig_sign(ctx: *const Context,
                                      sig: *mut SchnorrSignature,
-                                     nonce_is_negated: *mut c_int,
                                      msg32: *const c_uchar,
-                                     sk: *const c_uchar,
+                                     seckey: *const c_uchar,
                                      noncefn: Option<NonceFn>,
-                                     noncedata: *const c_void)
+                                     ndata: *const c_void)
                                      -> c_int;
 
     // MuSig
