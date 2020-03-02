@@ -1,8 +1,8 @@
 //! # MuSig - Rogue-Key-Resistant Multisignatures Module
 
-use super::{ffi, Secp256k1, key::PublicKey,
-    key::SecretKey, key::PublicKeyHash, constants, Message, 
-    schnorrsig::{NonceIsNegated, SchnorrSignature}};
+use super::{ffi, Secp256k1, key::{XOnlyPublicKey, MuSigPreSession},
+    key::SecretKey, constants, Message, 
+    schnorrsig::SchnorrSignature};
 use std::{fmt, error, ptr};
 #[cfg(any(test, feature = "rand"))] use rand::Rng;
 #[cfg(any(test, feature = "rand"))] use super::key;
@@ -94,6 +94,25 @@ impl Drop for MuSigSessionID {
 #[cfg_attr(not(feature = "zeroize"), derive(Copy))]
 pub struct MuSigPartialSignature(ffi::MuSigPartialSignature);
 
+/// Nonce in MuSig sessions
+pub struct MuSigNonce([u8; constants::NONCE_SIZE]);
+impl_array_newtype!(MuSigNonce, u8, constants::NONCE_SIZE);
+impl_pretty_debug!(MuSigNonce);
+
+impl MuSigNonce {
+    /// Serializes nonce into array
+    #[inline]
+    pub fn serialize(&self) -> [u8; constants::NONCE_SIZE] {
+        self.0
+    }
+
+    /// Deserializes array into nonce
+    #[inline]
+    pub fn deserialize_from(array: [u8; constants::NONCE_SIZE]) -> Self {
+        Self(array)
+    }
+}
+
 impl MuSigPartialSignature {
     /// Serializes multi-sig partial signature into array
     pub fn serialize(&self) -> [u8; constants::MUSIG_PARTIAL_SIGNATURE_SIZE] {
@@ -170,6 +189,9 @@ impl MuSigSessionID {
     }
 }
 
+/// "indicates if the combined public nonce had to be negated. Used for adaptor signatures."
+pub type NonceIsNegated = bool;
+
 /// The secp256k1 musig session
 /// TODO: verifier-only session
 /// TODO: adaptor signatures
@@ -178,7 +200,7 @@ pub struct MuSigSession<'a, C> {
     session: ffi::MuSigSession,
     signers: Vec<ffi::MuSigSessionSignerData>,
     nonce_commitments: Vec<MuSigNonceCommitment>,
-    my_index: usize
+    my_index: usize,
 }
 
 impl<'a, C> MuSigSession<'a, C> {
@@ -188,8 +210,8 @@ impl<'a, C> MuSigSession<'a, C> {
     pub fn new(secp: &'a Secp256k1<C>,
            session_id: MuSigSessionID, 
            message: &Message,
-           combined_pk: &PublicKey,
-           combined_pk_hash: &PublicKeyHash,
+           combined_pk: &XOnlyPublicKey,
+           pre_session: &MuSigPreSession,
            signers_len: usize,
            my_index: usize,
            signer_secret_key: &SecretKey)
@@ -201,7 +223,7 @@ impl<'a, C> MuSigSession<'a, C> {
             vec![ffi::MuSigSessionSignerData::new(); signers_len];
 
         unsafe {
-            let res = ffi::secp256k1_musig_session_initialize(
+            let res = ffi::secp256k1_musig_session_init(
                 secp.ctx,
                 &mut session,
                 &mut signers[0],
@@ -209,7 +231,7 @@ impl<'a, C> MuSigSession<'a, C> {
                 session_id.0.as_ptr(),
                 message.as_ptr(),
                 combined_pk.as_ptr(),
-                combined_pk_hash.as_ptr(),
+                pre_session.as_ptr(),
                 signers_len,
                 my_index,
                 signer_secret_key.as_ptr());
@@ -238,21 +260,22 @@ impl<'a, C> MuSigSession<'a, C> {
     }
 
     /// Gets the signer's public nonce (after all signers' nonce commitments were set)
-    pub fn get_public_nonce(&self) -> Result<PublicKey, Error> {
+    pub fn get_public_nonce(&self) -> Result<MuSigNonce, Error> {
         let commitments: Vec<*const u8> = self.nonce_commitments.iter().map(|x| x.as_ptr()).collect();
         unsafe {
-            let mut nonce = ffi::PublicKey::blank();
+            let mut nonce = [0u8; constants::NONCE_SIZE];
             let ret = ffi::secp256k1_musig_session_get_public_nonce(
                 self.secp.ctx,
                 &self.session,
                 &self.signers[0],
-                &mut nonce,
+                nonce.as_mut_ptr(),
                 commitments.as_ptr(),
                 commitments.len(),
+                // "Must be NULL if already set with `musig_session_init`"
                 ptr::null()
             );
             if ret == 1 {
-                Ok(PublicKey::from(nonce))
+                Ok(MuSigNonce(nonce))
             } else {
                 Err(Error::SessionPublicNonceFailed)
             }
@@ -262,7 +285,7 @@ impl<'a, C> MuSigSession<'a, C> {
     /// Checks one signer's public nonce against its commitment and sets it if they match.
     /// WARNING: abort the protocol if this fails; if you want to make another attempt
     /// at finishing the protocol, create a new session (with a fresh session ID!).
-    pub fn set_nonce(&mut self, signer_index: usize, signer_nonce: PublicKey) -> Result<(), Error> {
+    pub fn set_nonce(&mut self, signer_index: usize, signer_nonce: MuSigNonce) -> Result<(), Error> {
         unsafe {
             let ret = ffi::secp256k1_musig_set_nonce(
                 self.secp.ctx,
@@ -326,7 +349,7 @@ impl<'a, C> MuSigSession<'a, C> {
     pub fn partial_sig_verify(&self,
                               signature: &MuSigPartialSignature,
                               signer_index: usize,
-                              signer_pk: &PublicKey)
+                              signer_pk: &XOnlyPublicKey)
                               -> Result<(), Error> {
         unsafe {
             let ret = ffi::secp256k1_musig_partial_sig_verify(
@@ -358,7 +381,6 @@ impl<'a, C> MuSigSession<'a, C> {
                 &mut sig,
                 &sigs[0],
                 sigs.len(),
-                ptr::null() // TODO: ec_pubkey_tweak_add
             );
             if ret == 1 {
                 Ok(SchnorrSignature::from(sig))
@@ -381,10 +403,10 @@ impl<'a, C> Drop for MuSigSession<'a, C> {
 #[cfg(test)]
 mod tests {
     use rand::{RngCore, thread_rng};
-    use key::pubkey_combine;
+    use key::{pubkey_combine, XOnlyPublicKey};
     use schnorrsig::schnorr_verify;
-    use super::{Secp256k1, MuSigSessionID, MuSigSession, 
-        MuSigNonceCommitment, MuSigPartialSignature, Message, PublicKey, Error};
+    use super::{Secp256k1, MuSigSessionID, MuSigSession, MuSigNonce,
+        MuSigNonceCommitment, MuSigPartialSignature, Message, Error};
 
     #[test]
     fn pk_combine_works() {
@@ -393,9 +415,11 @@ mod tests {
         let (_, pk1) = full.generate_keypair(&mut thread_rng());
         let (_, pk2) = full.generate_keypair(&mut thread_rng());
         let (_, pk3) = full.generate_keypair(&mut thread_rng());
-
+        let pk1 = XOnlyPublicKey::from_pubkey(&pk1).0;
+        let pk2 = XOnlyPublicKey::from_pubkey(&pk2).0;
+        let pk3 = XOnlyPublicKey::from_pubkey(&pk3).0;
         assert!(pubkey_combine(&vrfy, &vec![pk1, pk2, pk3]).is_ok());
-        assert_eq!(pubkey_combine(&vrfy, &vec![pk1, pk2, pk3]), pubkey_combine(&full, &vec![pk1, pk2, pk3]));
+        assert_eq!(pubkey_combine(&vrfy, &vec![pk1, pk2, pk3]).unwrap().0, pubkey_combine(&full, &vec![pk1, pk2, pk3]).unwrap().0);
     }
 
     #[test]
@@ -407,7 +431,7 @@ mod tests {
         let mut msg = [0u8; 32];
         thread_rng().fill_bytes(&mut msg);
         let msg = Message::from_slice(&msg).unwrap();
-        let pks: Vec<PublicKey> = signers.iter().map(|x| x.1).collect();
+        let pks: Vec<XOnlyPublicKey> = signers.iter().map(|x| XOnlyPublicKey::from_pubkey(&x.1).0).collect();
         let mut sessions = Vec::new();
         // Initialize session
         for i in 0..signers.len() {
@@ -415,9 +439,9 @@ mod tests {
             let pksc = pubkey_combine(&full, &pks);
             let session_id = MuSigSessionID::new(&mut thread_rng());
             assert!(pksc.is_ok());
-            if let Ok((pk, pk_hash)) = pksc {
+            if let Ok((pk, pre_session)) = pksc {
                 let session = 
-                    MuSigSession::new(&full, session_id, &msg, &pk, &pk_hash, signers.len(), i, &signer.0);
+                    MuSigSession::new(&full, session_id, &msg, &pk, &pre_session, signers.len(), i, &signer.0);
                 assert!(session.is_ok());
                 sessions.push(session.unwrap());
             }
@@ -429,7 +453,7 @@ mod tests {
             session.set_nonce_commitments(commitments.clone());
         }
 
-        let nonces: Vec<Result<PublicKey, Error>> = 
+        let nonces: Vec<Result<MuSigNonce, Error>> = 
             sessions.iter().map(|x| x.get_public_nonce()).collect();
         for nonce in nonces.iter() {
             assert!(nonce.is_ok());

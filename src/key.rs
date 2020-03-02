@@ -511,44 +511,38 @@ impl From<ffi::XOnlyPublicKey> for XOnlyPublicKey {
 }
 
 
-/// MuSig: Public key hash
-pub struct PublicKeyHash([u8; constants::PK_HASH_SIZE]);
-impl_array_newtype!(PublicKeyHash, u8, constants::PK_HASH_SIZE);
-impl_pretty_debug!(PublicKeyHash);
+/// MuSig: pre-session
+#[cfg(feature = "musig")]
+pub struct MuSigPreSession(ffi::MuSigPreSession);
 
-impl PublicKeyHash {
-    /// Serializes public key hash into array
+#[cfg(feature = "musig")]
+impl MuSigPreSession {
+    /// Obtains a raw const pointer suitable for use with FFI functions
     #[inline]
-    pub fn serialize(&self) -> [u8; constants::PK_HASH_SIZE] {
-        self.0
-    }
-
-    /// Deserializes array into public key hash
-    #[inline]
-    pub fn deserialize_from(array: [u8; constants::PK_HASH_SIZE]) -> Self {
-        Self(array)
+    pub fn as_ptr(&self) -> *const ffi::MuSigPreSession {
+        &self.0 as *const _
     }
 }
 
 /// MuSig: Computes a combined public key and the hash of the given public keys
 #[cfg(feature = "musig")]
 pub fn pubkey_combine<C: Verification>(secp: &Secp256k1<C>, 
-                                       pubkeys: &[PublicKey])
-                                       -> Result<(PublicKey, PublicKeyHash), Error> {
-    let mut pk_hash32 = [0u8; constants::PK_HASH_SIZE];
-    let pks: Vec<ffi::PublicKey> = pubkeys.iter().map(|x| x.0.clone()).collect();
+                                       pubkeys: &[XOnlyPublicKey])
+                                       -> Result<(XOnlyPublicKey, MuSigPreSession), Error> {
+    let mut pre_session = ffi::MuSigPreSession::new();
+    let pks: Vec<ffi::XOnlyPublicKey> = pubkeys.iter().map(|x| x.0.clone()).collect();
     // currently uses an inefficient algorithm; TODO: utilize scratch space
     unsafe {
-        let mut combined_pk = ffi::PublicKey::blank();
+        let mut combined_pk = ffi::XOnlyPublicKey::blank();
         let res = ffi::secp256k1_musig_pubkey_combine(
             secp.ctx,
             std::ptr::null_mut(),
             &mut combined_pk,
-            pk_hash32.as_mut_ptr(),
+            &mut pre_session,
             pks.as_ptr(),
             pks.len());
         if res == 1 {
-            Ok((PublicKey::from(combined_pk), PublicKeyHash(pk_hash32)))
+            Ok((XOnlyPublicKey::from(combined_pk), MuSigPreSession(pre_session)))
         } else {
             Err(InvalidPublicKey)
         }

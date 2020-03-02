@@ -167,23 +167,49 @@ impl SchnorrSignature {
 #[repr(C)]
 pub struct ScratchSpace(c_int);
 
+/// Library-internal representation of a Secp256k1 MuSig signing pre-session
+#[repr(C)]
+pub struct MuSigPreSession {
+    magic: u64,
+    pk_hash: [c_uchar; 32],
+    is_pk_negated: c_int,
+    is_tweaked: c_int,
+    tweak: [c_uchar; 32],
+    is_internal_key_negated: c_int,
+}
+
+impl MuSigPreSession {
+    /// Create a new (zeroed) MuSig pre-session usable for the FFI interface
+    pub fn new() -> MuSigPreSession {
+        MuSigPreSession {
+            magic: 0,
+            pk_hash: [0; 32],
+            is_pk_negated: 0,
+            is_tweaked: 0,
+            tweak: [0; 32],
+            is_internal_key_negated: 0,
+        }
+    }
+}
+
 /// Library-internal representation of a Secp256k1 MuSig signing session
 #[repr(C)]
 pub struct MuSigSession {
-    combined_pk: PublicKey,
+    magic: u64,
+    round: c_int,
+    pre_session: MuSigPreSession,
+    combined_pk: XOnlyPublicKey,
     n_signers: u32,
-    pk_hash: [c_uchar; 32],
-    combined_nonce: PublicKey,
-    nonce_is_set: c_int,
-    nonce_is_negated: c_int,
-    msg: [c_uchar; 32],
     msg_is_set: c_int,
+    msg: [c_uchar; 32],
     has_secret_data: c_int,
     seckey: [c_uchar; 32],
     secnonce: [c_uchar; 32],
-    nonce: PublicKey,
+    nonce: XOnlyPublicKey,
+    is_partial_nonce_negated: c_int,
     nonce_commitments_hash: [c_uchar; 32],
-    nonce_commitments_hash_is_set: c_int
+    combined_nonce: XOnlyPublicKey,
+    is_combined_nonce_negated: c_int,
 }
 
 #[cfg(feature = "zeroize")]
@@ -199,20 +225,21 @@ impl MuSigSession {
     /// Create a new (zeroed) MuSig session usable for the FFI interface
     pub fn new() -> MuSigSession {
         MuSigSession {
-            combined_pk: PublicKey::new(),
+            magic: 0,
+            round: 0,
+            pre_session: MuSigPreSession::new(),
+            combined_pk: XOnlyPublicKey::new(),
             n_signers: 0,
-            pk_hash: [0; 32],
-            combined_nonce: PublicKey::new(),
-            nonce_is_set: 0,
-            nonce_is_negated: 0,
-            msg: [0; 32],
             msg_is_set: 0,
+            msg: [0; 32],
             has_secret_data: 0,
             seckey: [0; 32],
             secnonce: [0; 32],
-            nonce: PublicKey::new(),
+            nonce: XOnlyPublicKey::new(),
+            is_partial_nonce_negated: 0,
             nonce_commitments_hash: [0; 32],
-            nonce_commitments_hash_is_set: 0
+            combined_nonce: XOnlyPublicKey::new(),
+            is_combined_nonce_negated: 0,
         }
     }
 }
@@ -223,7 +250,7 @@ impl MuSigSession {
 pub struct MuSigSessionSignerData {
     present: c_int,
     index: u32,
-    nonce: PublicKey,
+    nonce: XOnlyPublicKey,
     nonce_commitment: [c_uchar; 32]
 }
 
@@ -233,7 +260,7 @@ impl MuSigSessionSignerData {
         MuSigSessionSignerData {
             present: 0,
             index: 0,
-            nonce: PublicKey::new(),
+            nonce: XOnlyPublicKey::new(),
             nonce_commitment: [0; 32]
         }
     }
@@ -443,21 +470,21 @@ extern "C" {
     pub fn secp256k1_musig_pubkey_combine(
         cx: *const Context,
         scratch: *mut ScratchSpace,
-        combined_pk: *mut PublicKey,
-        pk_hash32: *mut c_uchar,
-        pubkeys: *const PublicKey,
+        combined_pk: *mut XOnlyPublicKey,
+        pre_session: *mut MuSigPreSession,
+        pubkeys: *const XOnlyPublicKey,
         n_pubkeys: usize)
         -> c_int;
 
-    pub fn secp256k1_musig_session_initialize(
+    pub fn secp256k1_musig_session_init(
         cx: *const Context,
         session: *mut MuSigSession,
         signers: *mut MuSigSessionSignerData,
         nonce_commitment32: *mut c_uchar,
         session_id32: *const c_uchar,
         msg32: *const c_uchar,
-        combined_pk: *const PublicKey,
-        pk_hash32: *const c_uchar,
+        combined_pk: *const XOnlyPublicKey,
+        pre_session: *const MuSigPreSession,
         n_signers: usize,
         my_index: usize,
         seckey: *const c_uchar)
@@ -467,19 +494,19 @@ extern "C" {
         cx: *const Context,
         session: *const MuSigSession,
         signers: *const MuSigSessionSignerData,
-        nonce: *mut PublicKey,
+        nonce32: *mut c_uchar,
         commitments: *const *const c_uchar,
         n_commitments: usize,
         msg32: *const c_uchar)
         -> c_int;
 
-    pub fn secp256k1_musig_session_initialize_verifier(
+    pub fn secp256k1_musig_session_init_verifier(
         cx: *const Context,
         session: *mut MuSigSession,
         signers: *mut MuSigSessionSignerData,
         msg32: *const c_uchar,
-        combined_pk: *const PublicKey,
-        pk_hash32: *const c_uchar,
+        combined_pk: *const XOnlyPublicKey,
+        pre_session: *const MuSigPreSession,
         commitments: *const *const c_uchar,
         n_signers: usize)
         -> c_int;
@@ -487,7 +514,7 @@ extern "C" {
     pub fn secp256k1_musig_set_nonce(
         cx: *const Context,
         signer: *mut MuSigSessionSignerData,
-        nonce: *const PublicKey)
+        nonce32: *const c_uchar)
         -> c_int;
 
     pub fn secp256k1_musig_session_combine_nonces(
@@ -508,7 +535,7 @@ extern "C" {
     pub fn secp256k1_musig_partial_signature_parse(
         cx: *const Context,
         sig: *mut MuSigPartialSignature,
-        out32: *const c_uchar)
+        in32: *const c_uchar)
         -> c_int;
 
     pub fn secp256k1_musig_partial_sign(
@@ -522,7 +549,7 @@ extern "C" {
         session: *const MuSigSession,
         signer: *const MuSigSessionSignerData,
         sig: *const MuSigPartialSignature,
-        pubkey: *const PublicKey)
+        pubkey: *const XOnlyPublicKey)
         -> c_int;       
 
      pub fn secp256k1_musig_partial_sig_combine(
@@ -530,8 +557,7 @@ extern "C" {
         session: *const MuSigSession,
         sig: *mut SchnorrSignature,
         partial_sigs: *const MuSigPartialSignature,
-        n_sigs: usize,
-        tweak32: *const c_uchar)
+        n_sigs: usize)
         -> c_int;
 
 }

@@ -61,14 +61,14 @@ pub const GENERATOR_Y: [u8; 32] = [
     0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8
 ];
 
-/// The size (in bytes) of a MuSig public commitment
+/// The size (in bytes) of a MuSig public nonce commitment
 pub const COMMITMENT_SIZE: usize = 32;
+
+/// The size (in bytes) of a MuSig nonce
+pub const NONCE_SIZE: usize = 32;
 
 /// The size (in bytes) of a MuSig session id
 pub const SESSION_ID_SIZE: usize = 32;
-
-/// The size (in bytes) of a combined public key hash
-pub const PK_HASH_SIZE: usize = 32;
 
 /// The size (in bytes) of a multi-sig partial signature
 pub const MUSIG_PARTIAL_SIGNATURE_SIZE: usize = 32;
