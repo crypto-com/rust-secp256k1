@@ -56,12 +56,14 @@ fn main() {
                .define("ENABLE_MODULE_SCHNORRSIG", Some("1"));
 
 
-    #[cfg(not(feature = "sgx"))]
+    #[cfg(not(any(feature = "sgx", feature = "edp")))]
     base_config.define("ECMULT_WINDOW_SIZE", Some("15")); // This is the default in the configure file (`auto`)
-    #[cfg(feature = "sgx")]
+    #[cfg(any(feature = "sgx", feature = "edp"))]
     base_config.define("USE_SGX", Some("1"));
-    #[cfg(feature = "sgx")]
-    base_config.define("ECMULT_WINDOW_SIZE", Some("2")); // smaller memory size
+    #[cfg(feature = "edp")]
+    base_config.define("USE_EDP", Some("1"));
+    #[cfg(any(feature = "sgx", feature = "edp"))]
+    base_config.define("ECMULT_WINDOW_SIZE", Some("4")); // smaller memory size
     #[cfg(feature = "musig")]
     base_config.define("ENABLE_MODULE_MUSIG", Some("1"));
     #[cfg(feature = "endomorphism")]
