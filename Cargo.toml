@@ -37,7 +37,7 @@ sgx = []
 edp = []
 
 [target.'cfg(all(not(target_env = "sgx"), feature = "sgx"))'.dependencies]
-sgx_tstd = { rev = "v1.1.1", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_tstd = { rev = "v1.1.2", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [dev-dependencies]
 rand = "0.7"
