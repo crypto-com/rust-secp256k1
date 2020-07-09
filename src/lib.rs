@@ -171,6 +171,8 @@ pub mod ecdh;
 pub mod key;
 #[cfg(feature = "recovery")]
 pub mod recovery;
+#[cfg(feature = "schnorrsig")]
+pub mod schnorrsig;
 
 pub use key::SecretKey;
 pub use key::PublicKey;

@@ -25,6 +25,8 @@ use Signing;
 use Verification;
 use constants;
 use ffi::{self, CPtr};
+#[cfg(feature = "schnorrsig")]
+pub use schnorrsig::XOnlyPublicKey;
 
 /// Secret 256-bit key used as `x` in an ECDSA signature
 pub struct SecretKey([u8; constants::SECRET_KEY_SIZE]);
@@ -102,7 +104,7 @@ impl str::FromStr for PublicKey {
 }
 
 #[cfg(any(test, feature = "rand"))]
-fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
+pub(crate) fn random_32_bytes<R: Rng + ?Sized>(rng: &mut R) -> [u8; 32] {
     let mut ret = [0u8; 32];
     rng.fill_bytes(&mut ret);
     ret

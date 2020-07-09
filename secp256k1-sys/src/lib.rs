@@ -35,6 +35,8 @@ pub mod types;
 
 #[cfg(feature = "recovery")]
 pub mod recovery;
+#[cfg(feature = "schnorrsig")]
+pub mod schnorrsig;
 
 use core::{hash, slice, ptr};
 use types::*;

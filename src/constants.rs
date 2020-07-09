@@ -25,6 +25,10 @@ pub const SECRET_KEY_SIZE: usize = 32;
 /// The size (in bytes) of a serialized public key.
 pub const PUBLIC_KEY_SIZE: usize = 33;
 
+/// The size (in bytes) of a serialized x-only public key.
+#[cfg(feature = "schnorrsig")]
+pub const XONLY_PUBLIC_KEY_SIZE: usize = 32;
+
 /// The size (in bytes) of an serialized uncompressed public key
 pub const UNCOMPRESSED_PUBLIC_KEY_SIZE: usize = 65;
 
@@ -33,6 +37,14 @@ pub const MAX_SIGNATURE_SIZE: usize = 72;
 
 /// The maximum size of a compact signature
 pub const COMPACT_SIGNATURE_SIZE: usize = 64;
+
+/// The size (in bytes) of a BIP-340 Schnorr signature
+#[cfg(feature = "schnorrsig")]
+pub const SCHNORR_SIGNATURE_SIZE: usize = 64;
+
+/// The size (in bytes) of a BIP-340 auxiliary randomness for nonce
+#[cfg(feature = "schnorrsig")]
+pub const SCHNORR_NONCE_SIZE: usize = 32;
 
 /// The Prime for the secp256k1 field element.
 pub const FIELD_SIZE: [u8; 32] = [
@@ -65,5 +77,4 @@ pub const GENERATOR_Y: [u8; 32] = [
     0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19,
     0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8
 ];
-
 
