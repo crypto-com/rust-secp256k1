@@ -12,6 +12,14 @@
 # include "include/rustsecp256k1_v0_1_2_ecdh.h"
 #endif
 
+#if ENABLE_MODULE_EXTRAKEYS
+# include "include/rustsecp256k1_v0_1_2_extrakeys.h"
+#endif
+
+#if ENABLE_MODULE_SCHNORRSIG
+#include "include/secp256k1_schnorrsig.h"
+#endif
+
 int main(void) {
     rustsecp256k1_v0_1_2_context* ctx;
     rustsecp256k1_v0_1_2_ecdsa_signature signature;
@@ -24,6 +32,9 @@ int main(void) {
     unsigned char key[32];
     unsigned char sig[74];
     unsigned char spubkey[33];
+#if ENABLE_MODULE_EXTRAKEYS
+    rustsecp256k1_v0_1_2_keypair keypair;
+#endif
 
     if (!RUNNING_ON_VALGRIND) {
         fprintf(stderr, "This test can only usefully be run inside valgrind.\n");
@@ -41,7 +52,9 @@ int main(void) {
         msg[i] = i + 1;
     }
 
-    ctx = rustsecp256k1_v0_1_2_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_DECLASSIFY);
+    ctx = rustsecp256k1_v0_1_2_context_create(SECP256K1_CONTEXT_SIGN
+                                   | SECP256K1_CONTEXT_VERIFY
+                                   | SECP256K1_CONTEXT_DECLASSIFY);
 
     /* Test keygen. */
     VALGRIND_MAKE_MEM_UNDEFINED(key, 32);
@@ -94,6 +107,28 @@ int main(void) {
     ret = rustsecp256k1_v0_1_2_context_randomize(ctx, key);
     VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
     CHECK(ret);
+
+    /* Test keypair_create and keypair_xonly_tweak_add. */
+#if ENABLE_MODULE_EXTRAKEYS
+    VALGRIND_MAKE_MEM_UNDEFINED(key, 32);
+    ret = rustsecp256k1_v0_1_2_keypair_create(ctx, &keypair, key);
+    VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
+    CHECK(ret == 1);
+
+    /* The tweak is not treated as a secret in keypair_tweak_add */
+    VALGRIND_MAKE_MEM_DEFINED(msg, 32);
+    ret = rustsecp256k1_v0_1_2_keypair_xonly_tweak_add(ctx, &keypair, msg);
+    VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
+    CHECK(ret == 1);
+#endif
+
+#if ENABLE_MODULE_SCHNORRSIG
+    VALGRIND_MAKE_MEM_UNDEFINED(key, 32);
+    ret = rustsecp256k1_v0_1_2_keypair_create(ctx, &keypair, key);
+    ret = rustsecp256k1_v0_1_2_schnorrsig_sign(ctx, sig, msg, &keypair, NULL, NULL);
+    VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
+    CHECK(ret == 1);
+#endif
 
     rustsecp256k1_v0_1_2_context_destroy(ctx);
     return 0;

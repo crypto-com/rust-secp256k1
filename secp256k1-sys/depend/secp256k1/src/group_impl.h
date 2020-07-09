@@ -241,6 +241,18 @@ static int rustsecp256k1_v0_1_2_ge_set_xo_var(rustsecp256k1_v0_1_2_ge *r, const 
 
 }
 
+static void rustsecp256k1_v0_1_2_ge_even_y(rustsecp256k1_v0_1_2_ge *r, int *y_parity) {
+    if (y_parity != NULL) {
+        *y_parity = 0;
+    }
+    if (rustsecp256k1_v0_1_2_fe_is_odd(&r->y)) {
+        rustsecp256k1_v0_1_2_ge_neg(r, r);
+        if (y_parity != NULL) {
+            *y_parity = 1;
+        }
+    }
+}
+
 static void rustsecp256k1_v0_1_2_gej_set_ge(rustsecp256k1_v0_1_2_gej *r, const rustsecp256k1_v0_1_2_ge *a) {
    r->infinity = a->infinity;
    r->x = a->x;

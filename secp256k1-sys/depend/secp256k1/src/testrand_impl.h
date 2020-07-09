@@ -107,4 +107,8 @@ static void rustsecp256k1_v0_1_2_rand256_test(unsigned char *b32) {
     rustsecp256k1_v0_1_2_rand_bytes_test(b32, 32);
 }
 
+static void rustsecp256k1_v0_1_2_rand_flip(unsigned char *b, size_t len) {
+    b[rustsecp256k1_v0_1_2_rand_int(len)] ^= (1 << rustsecp256k1_v0_1_2_rand_int(8));
+}
+
 #endif /* SECP256K1_TESTRAND_IMPL_H */

@@ -449,6 +449,29 @@ void run_sha256_tests(void) {
     }
 }
 
+/* Tests for the equality of two sha256 structs. This function only produces a
+ * correct result if an integer multiple of 64 many bytes have been written
+ * into the hash functions. */
+void test_sha256_eq(rustsecp256k1_v0_1_2_sha256 *sha1, rustsecp256k1_v0_1_2_sha256 *sha2) {
+    unsigned char buf[32] = { 0 };
+    unsigned char buf2[32];
+
+    /* Is buffer fully consumed? */
+    CHECK((sha1->bytes & 0x3F) == 0);
+
+    /* Compare the struct excluding the buffer, because it may be
+     * uninitialized or already included in the state. */
+    CHECK(sha1->bytes == sha2->bytes);
+    CHECK(memcmp(sha1->s, sha2->s, sizeof(sha1->s)) == 0);
+
+    /* Compare the output */
+    rustsecp256k1_v0_1_2_sha256_write(sha1, buf, 32);
+    rustsecp256k1_v0_1_2_sha256_write(sha2, buf, 32);
+    rustsecp256k1_v0_1_2_sha256_finalize(sha1, buf);
+    rustsecp256k1_v0_1_2_sha256_finalize(sha2, buf2);
+    CHECK(memcmp(buf, buf2, 32) == 0);
+}
+
 void run_hmac_sha256_tests(void) {
     static const char *keys[6] = {
         "\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b",
@@ -5288,6 +5311,14 @@ void run_ecdsa_openssl(void) {
 # include "modules/recovery/tests_impl.h"
 #endif
 
+#ifdef ENABLE_MODULE_EXTRAKEYS
+# include "modules/extrakeys/tests_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+# include "modules/schnorrsig/tests_impl.h"
+#endif
+
 void run_memczero_test(void) {
     unsigned char buf1[6] = {1, 2, 3, 4, 5, 6};
     unsigned char buf2[sizeof(buf1)];
@@ -5437,6 +5468,14 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_MODULE_RECOVERY
     /* ECDSA pubkey recovery tests */
     run_recovery_tests();
+#endif
+
+#ifdef ENABLE_MODULE_EXTRAKEYS
+    run_extrakeys_tests();
+#endif
+
+#ifdef ENABLE_MODULE_SCHNORRSIG
+    run_schnorrsig_tests();
 #endif
 
     /* util tests */

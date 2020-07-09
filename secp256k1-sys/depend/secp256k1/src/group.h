@@ -53,6 +53,10 @@ static int rustsecp256k1_v0_1_2_ge_set_xquad(rustsecp256k1_v0_1_2_ge *r, const r
  *  for Y. Return value indicates whether the result is valid. */
 static int rustsecp256k1_v0_1_2_ge_set_xo_var(rustsecp256k1_v0_1_2_ge *r, const rustsecp256k1_v0_1_2_fe *x, int odd);
 
+/** Keeps a group element as is if it has an even Y and otherwise negates it.
+ *  y_parity is set to 0 in the former case and to 1 in the latter case. */
+static void rustsecp256k1_v0_1_2_ge_even_y(rustsecp256k1_v0_1_2_ge *r, int *y_parity);
+
 /** Check whether a group element is the point at infinity. */
 static int rustsecp256k1_v0_1_2_ge_is_infinity(const rustsecp256k1_v0_1_2_ge *a);
 
