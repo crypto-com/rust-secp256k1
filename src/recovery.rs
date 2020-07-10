@@ -145,6 +145,31 @@ impl From<ffi::RecoverableSignature> for RecoverableSignature {
     }
 }
 
+#[cfg(feature = "serde")]
+impl ::serde::Serialize for RecoverableSignature {
+    fn serialize<S: ::serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeTuple;
+
+        let (recovery_id, bytes) = &self.serialize_compact();
+
+        let mut tup = s.serialize_tuple(2)?;
+        tup.serialize_element(&recovery_id.to_i32())?;
+        tup.serialize_element(&bytes.to_vec())?;
+        tup.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> ::serde::Deserialize<'de> for RecoverableSignature {
+    fn deserialize<D: ::serde::Deserializer<'de>>(d: D) -> Result<RecoverableSignature, D::Error> {
+        use ::serde::de::Error;
+
+        let (recovery_id, bytes): (i32, Vec<u8>) = ::serde::Deserialize::deserialize(d)?;
+        RecoverableSignature::from_compact(&bytes,
+            RecoveryId::from_i32(recovery_id).map_err(D::Error::custom)?).map_err(D::Error::custom)
+    }
+}
+
 impl<C: Signing> Secp256k1<C> {
     /// Constructs a signature for `msg` using the secret key `sk` and RFC6979 nonce
     /// Requires a signing-capable context.
@@ -357,6 +382,99 @@ mod tests {
         assert_eq!(id0.to_i32(), 0);
         let id1 = RecoveryId(1);
         assert_eq!(id1.to_i32(), 1);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_recoverable_signature_serde() {
+        use serde_test::{Token, assert_tokens};
+
+        let recid_in = RecoveryId(1);
+        let bytes_in = &[
+            0x66, 0x73, 0xff, 0xad, 0x21, 0x47, 0x74, 0x1f,
+            0x04, 0x77, 0x2b, 0x6f, 0x92, 0x1f, 0x0b, 0xa6,
+            0xaf, 0x0c, 0x1e, 0x77, 0xfc, 0x43, 0x9e, 0x65,
+            0xc3, 0x6d, 0xed, 0xf4, 0x09, 0x2e, 0x88, 0x98,
+            0x4c, 0x1a, 0x97, 0x16, 0x52, 0xe0, 0xad, 0xa8,
+            0x80, 0x12, 0x0e, 0xf8, 0x02, 0x5e, 0x70, 0x9f,
+            0xff, 0x20, 0x80, 0xc4, 0xa3, 0x9a, 0xae, 0x06,
+            0x8d, 0x12, 0xee, 0xd0, 0x09, 0xb6, 0x8c, 0x89];
+        let sig = RecoverableSignature::from_compact(
+            bytes_in,
+            recid_in,
+        ).unwrap();
+
+        assert_tokens(&sig, &[
+            Token::Tuple { len: 2 },
+            Token::I32(1),
+            Token::Seq { len: Some(64) },
+            Token::U8(0x66),
+            Token::U8(0x73),
+            Token::U8(0xff),
+            Token::U8(0xad),
+            Token::U8(0x21),
+            Token::U8(0x47),
+            Token::U8(0x74),
+            Token::U8(0x1f),
+            Token::U8(0x04),
+            Token::U8(0x77),
+            Token::U8(0x2b),
+            Token::U8(0x6f),
+            Token::U8(0x92),
+            Token::U8(0x1f),
+            Token::U8(0x0b),
+            Token::U8(0xa6),
+            Token::U8(0xaf),
+            Token::U8(0x0c),
+            Token::U8(0x1e),
+            Token::U8(0x77),
+            Token::U8(0xfc),
+            Token::U8(0x43),
+            Token::U8(0x9e),
+            Token::U8(0x65),
+            Token::U8(0xc3),
+            Token::U8(0x6d),
+            Token::U8(0xed),
+            Token::U8(0xf4),
+            Token::U8(0x09),
+            Token::U8(0x2e),
+            Token::U8(0x88),
+            Token::U8(0x98),
+            Token::U8(0x4c),
+            Token::U8(0x1a),
+            Token::U8(0x97),
+            Token::U8(0x16),
+            Token::U8(0x52),
+            Token::U8(0xe0),
+            Token::U8(0xad),
+            Token::U8(0xa8),
+            Token::U8(0x80),
+            Token::U8(0x12),
+            Token::U8(0x0e),
+            Token::U8(0xf8),
+            Token::U8(0x02),
+            Token::U8(0x5e),
+            Token::U8(0x70),
+            Token::U8(0x9f),
+            Token::U8(0xff),
+            Token::U8(0x20),
+            Token::U8(0x80),
+            Token::U8(0xc4),
+            Token::U8(0xa3),
+            Token::U8(0x9a),
+            Token::U8(0xae),
+            Token::U8(0x06),
+            Token::U8(0x8d),
+            Token::U8(0x12),
+            Token::U8(0xee),
+            Token::U8(0xd0),
+            Token::U8(0x09),
+            Token::U8(0xb6),
+            Token::U8(0x8c),
+            Token::U8(0x89),
+            Token::SeqEnd,
+            Token::TupleEnd,
+        ]);
     }
 }
 
