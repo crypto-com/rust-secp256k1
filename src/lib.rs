@@ -122,7 +122,7 @@
 #![cfg_attr(not(feature = "sgx"), crate_type = "dylib")]
 #![cfg_attr(feature = "sgx", crate_type = "staticlib")]
 
-#![crate_name = "secp256k1"]
+#![crate_name = "secp256k1experimental"]
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
