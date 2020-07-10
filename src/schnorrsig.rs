@@ -57,14 +57,8 @@ impl XOnlyPublicKey {
     /// Creates a new x-only public key from a secret key.
     #[inline]
     pub fn from_secret_key<C: Signing>(secp: &Secp256k1<C>, sk: &SecretKey) -> XOnlyPublicKey {
-        let mut pk = ffi::XOnlyPublicKey::new();
-        unsafe {
-            // We can assume the return value because it's not possible to construct
-            // an invalid `SecretKey` without transmute trickery or something
-            let res = ffi::secp256k1_xonly_pubkey_create(secp.ctx, &mut pk, sk.as_ptr());
-            debug_assert_eq!(res, 1);
-        }
-        XOnlyPublicKey(pk)
+        let pk = PublicKey::from_secret_key(secp, sk);
+        XOnlyPublicKey::from_pubkey(&pk).0
     }
 
     /// Serialize an xonly_pubkey object into a 32-byte sequence.

@@ -57,12 +57,6 @@ extern "C" {
                                             pubkey: *const XOnlyPublicKey)
                                             -> c_int;
 
-    #[cfg_attr(not(feature = "external-symbols"), link_name = "rustsecp256k1_v0_1_2_xonly_pubkey_create")]
-    pub fn secp256k1_xonly_pubkey_create(ctx: *const Context,
-                                         pubkey: *mut XOnlyPublicKey,
-                                         seckey: *const c_uchar)
-                                         -> c_int;
-
     #[cfg_attr(not(feature = "external-symbols"), link_name = "rustsecp256k1_v0_1_2_xonly_pubkey_from_pubkey")]
     pub fn secp256k1_xonly_pubkey_from_pubkey(ctx: *const Context,
                                               xonly_pubkey: *mut XOnlyPublicKey,
