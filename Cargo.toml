@@ -1,6 +1,6 @@
 [package]
 
-name = "secp256k1zkp"
+name = "secp256k1experimental"
 version = "0.13.0"
 authors = [ "Dawid Ciężarkiewicz <dpc@ucore.info>",
             "Andrew Poelstra <apoelstra@wpsoftware.net>" ]
@@ -22,7 +22,7 @@ all-features = true
 cc = ">= 1.0.28"
 
 [lib]
-name = "secp256k1"
+name = "secp256k1experimental"
 path = "src/lib.rs"
 
 [features]
