@@ -160,6 +160,7 @@ pub use secp256k1_sys as ffi;
 #[cfg(all(test, feature = "serde"))] extern crate serde_test;
 #[cfg(any(test, feature = "rand"))] use rand::Rng;
 #[cfg(any(test, feature = "std"))] extern crate core;
+#[cfg(feature = "zeroize")] pub extern crate zeroize;
 
 use core::{fmt, ptr, str};
 

@@ -27,8 +27,11 @@ use constants;
 use ffi::{self, CPtr};
 #[cfg(feature = "schnorrsig")]
 pub use schnorrsig::XOnlyPublicKey;
+#[cfg(feature = "zeroize")]
+use zeroize::Zeroize;
 
 /// Secret 256-bit key used as `x` in an ECDSA signature
+#[cfg_attr(feature = "zeroize", derive(Zeroize))]
 pub struct SecretKey([u8; constants::SECRET_KEY_SIZE]);
 impl_array_newtype!(SecretKey, u8, constants::SECRET_KEY_SIZE);
 impl_pretty_debug!(SecretKey);
