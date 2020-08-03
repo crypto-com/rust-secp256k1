@@ -25,6 +25,16 @@ extern crate cc;
 
 use std::env;
 
+fn lvi_mitigation_not_supported(base_config: &cc::Build) -> bool {
+    let feature_flag = base_config.is_flag_supported("-mlvi-hardening");
+
+    match feature_flag {
+        Ok(false) => true,
+        Err(_) => true,
+        _ => false
+    }
+}
+
 fn main() {
     if cfg!(feature = "external-symbols") {
         println!("cargo:rustc-link-lib=static=secp256k1");
@@ -59,6 +69,17 @@ fn main() {
                .define("USE_FIELD_INV_BUILTIN", Some("1"))
                .define("USE_SCALAR_INV_BUILTIN", Some("1"));
     
+    // LVI hardening flags
+    if lvi_mitigation_not_supported(&base_config) {
+        println!(
+            "cargo:warning=\"LVI mitigation flags are not supported by the C compiler (please upgrade to the latest LLVM 11)\""
+        );
+    } else {
+        base_config.flag("-mlvi-hardening");
+        base_config.flag("-mllvm");
+        base_config.flag("-x86-experimental-lvi-inline-asm-hardening");
+    }
+
     if cfg!(feature = "lowmemory") {
         base_config.define("ECMULT_WINDOW_SIZE", Some("4")); // A low-enough value to consume neglible memory
     } else {
