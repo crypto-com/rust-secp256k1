@@ -136,7 +136,7 @@ static void rustsecp256k1_v0_1_2_ge_to_storage(rustsecp256k1_v0_1_2_ge_storage *
 /** Convert a group element back from the storage type. */
 static void rustsecp256k1_v0_1_2_ge_from_storage(rustsecp256k1_v0_1_2_ge *r, const rustsecp256k1_v0_1_2_ge_storage *a);
 
-/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time. */
+/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized.*/
 static void rustsecp256k1_v0_1_2_ge_storage_cmov(rustsecp256k1_v0_1_2_ge_storage *r, const rustsecp256k1_v0_1_2_ge_storage *a, int flag);
 
 /** Rescale a jacobian point by b which must be non-zero. Constant-time. */

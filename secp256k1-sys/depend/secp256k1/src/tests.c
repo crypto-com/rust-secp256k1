@@ -32,17 +32,6 @@ void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps) 
 #include "contrib/lax_der_parsing.c"
 #include "contrib/lax_der_privatekey_parsing.c"
 
-#if !defined(VG_CHECK)
-# if defined(VALGRIND)
-#  include <valgrind/memcheck.h>
-#  define VG_UNDEF(x,y) VALGRIND_MAKE_MEM_UNDEFINED((x),(y))
-#  define VG_CHECK(x,y) VALGRIND_CHECK_MEM_IS_DEFINED((x),(y))
-# else
-#  define VG_UNDEF(x,y)
-#  define VG_CHECK(x,y)
-# endif
-#endif
-
 static int count = 64;
 static rustsecp256k1_v0_1_2_context *ctx = NULL;
 
@@ -3001,14 +2990,16 @@ void test_ecmult_multi(rustsecp256k1_v0_1_2_scratch *scratch, rustsecp256k1_v0_1
 
 void test_ecmult_multi_batch_single(rustsecp256k1_v0_1_2_ecmult_multi_func ecmult_multi) {
     rustsecp256k1_v0_1_2_scalar szero;
-    rustsecp256k1_v0_1_2_scalar sc[32];
-    rustsecp256k1_v0_1_2_ge pt[32];
+    rustsecp256k1_v0_1_2_scalar sc;
+    rustsecp256k1_v0_1_2_ge pt;
     rustsecp256k1_v0_1_2_gej r;
     ecmult_multi_data data;
     rustsecp256k1_v0_1_2_scratch *scratch_empty;
 
-    data.sc = sc;
-    data.pt = pt;
+    random_group_element_test(&pt);
+    random_scalar_order(&sc);
+    data.sc = &sc;
+    data.pt = &pt;
     rustsecp256k1_v0_1_2_scalar_set_int(&szero, 0);
 
     /* Try to multiply 1 point, but scratch space is empty.*/
@@ -3152,7 +3143,7 @@ void test_ecmult_multi_batching(void) {
     data.pt = pt;
     rustsecp256k1_v0_1_2_gej_neg(&r2, &r2);
 
-    /* Test with empty scratch space. It should compute the correct result using 
+    /* Test with empty scratch space. It should compute the correct result using
      * ecmult_mult_simple algorithm which doesn't require a scratch space. */
     scratch = rustsecp256k1_v0_1_2_scratch_create(&ctx->error_callback, 0);
     CHECK(rustsecp256k1_v0_1_2_ecmult_multi_var(&ctx->error_callback, &ctx->ecmult_ctx, scratch, &r, &scG, ecmult_multi_callback, &data, n_points));
@@ -5334,6 +5325,161 @@ void run_memczero_test(void) {
     CHECK(memcmp(buf1, buf2, sizeof(buf1)) == 0);
 }
 
+void int_cmov_test(void) {
+    int r = INT_MAX;
+    int a = 0;
+
+    rustsecp256k1_v0_1_2_int_cmov(&r, &a, 0);
+    CHECK(r == INT_MAX);
+
+    r = 0; a = INT_MAX;
+    rustsecp256k1_v0_1_2_int_cmov(&r, &a, 1);
+    CHECK(r == INT_MAX);
+
+    a = 0;
+    rustsecp256k1_v0_1_2_int_cmov(&r, &a, 1);
+    CHECK(r == 0);
+
+    a = 1;
+    rustsecp256k1_v0_1_2_int_cmov(&r, &a, 1);
+    CHECK(r == 1);
+
+    r = 1; a = 0;
+    rustsecp256k1_v0_1_2_int_cmov(&r, &a, 0);
+    CHECK(r == 1);
+
+}
+
+void fe_cmov_test(void) {
+    static const rustsecp256k1_v0_1_2_fe zero = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+    static const rustsecp256k1_v0_1_2_fe one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+    static const rustsecp256k1_v0_1_2_fe max = SECP256K1_FE_CONST(
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
+    );
+    rustsecp256k1_v0_1_2_fe r = max;
+    rustsecp256k1_v0_1_2_fe a = zero;
+
+    rustsecp256k1_v0_1_2_fe_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    r = zero; a = max;
+    rustsecp256k1_v0_1_2_fe_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    a = zero;
+    rustsecp256k1_v0_1_2_fe_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &zero, sizeof(r)) == 0);
+
+    a = one;
+    rustsecp256k1_v0_1_2_fe_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+
+    r = one; a = zero;
+    rustsecp256k1_v0_1_2_fe_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+}
+
+void fe_storage_cmov_test(void) {
+    static const rustsecp256k1_v0_1_2_fe_storage zero = SECP256K1_FE_STORAGE_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+    static const rustsecp256k1_v0_1_2_fe_storage one = SECP256K1_FE_STORAGE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+    static const rustsecp256k1_v0_1_2_fe_storage max = SECP256K1_FE_STORAGE_CONST(
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
+    );
+    rustsecp256k1_v0_1_2_fe_storage r = max;
+    rustsecp256k1_v0_1_2_fe_storage a = zero;
+
+    rustsecp256k1_v0_1_2_fe_storage_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    r = zero; a = max;
+    rustsecp256k1_v0_1_2_fe_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    a = zero;
+    rustsecp256k1_v0_1_2_fe_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &zero, sizeof(r)) == 0);
+
+    a = one;
+    rustsecp256k1_v0_1_2_fe_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+
+    r = one; a = zero;
+    rustsecp256k1_v0_1_2_fe_storage_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+}
+
+void scalar_cmov_test(void) {
+    static const rustsecp256k1_v0_1_2_scalar zero = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+    static const rustsecp256k1_v0_1_2_scalar one = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+    static const rustsecp256k1_v0_1_2_scalar max = SECP256K1_SCALAR_CONST(
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
+    );
+    rustsecp256k1_v0_1_2_scalar r = max;
+    rustsecp256k1_v0_1_2_scalar a = zero;
+
+    rustsecp256k1_v0_1_2_scalar_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    r = zero; a = max;
+    rustsecp256k1_v0_1_2_scalar_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    a = zero;
+    rustsecp256k1_v0_1_2_scalar_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &zero, sizeof(r)) == 0);
+
+    a = one;
+    rustsecp256k1_v0_1_2_scalar_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+
+    r = one; a = zero;
+    rustsecp256k1_v0_1_2_scalar_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+}
+
+void ge_storage_cmov_test(void) {
+    static const rustsecp256k1_v0_1_2_ge_storage zero = SECP256K1_GE_STORAGE_CONST(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    static const rustsecp256k1_v0_1_2_ge_storage one = SECP256K1_GE_STORAGE_CONST(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1);
+    static const rustsecp256k1_v0_1_2_ge_storage max = SECP256K1_GE_STORAGE_CONST(
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL
+    );
+    rustsecp256k1_v0_1_2_ge_storage r = max;
+    rustsecp256k1_v0_1_2_ge_storage a = zero;
+
+    rustsecp256k1_v0_1_2_ge_storage_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    r = zero; a = max;
+    rustsecp256k1_v0_1_2_ge_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &max, sizeof(r)) == 0);
+
+    a = zero;
+    rustsecp256k1_v0_1_2_ge_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &zero, sizeof(r)) == 0);
+
+    a = one;
+    rustsecp256k1_v0_1_2_ge_storage_cmov(&r, &a, 1);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+
+    r = one; a = zero;
+    rustsecp256k1_v0_1_2_ge_storage_cmov(&r, &a, 0);
+    CHECK(memcmp(&r, &one, sizeof(r)) == 0);
+}
+
+void run_cmov_tests(void) {
+    int_cmov_test();
+    fe_cmov_test();
+    fe_storage_cmov_test();
+    scalar_cmov_test();
+    ge_storage_cmov_test();
+}
+
 int main(int argc, char **argv) {
     unsigned char seed16[16] = {0};
     unsigned char run32[32] = {0};
@@ -5480,6 +5626,8 @@ int main(int argc, char **argv) {
 
     /* util tests */
     run_memczero_test();
+
+    run_cmov_tests();
 
     rustsecp256k1_v0_1_2_rand256(run32);
     printf("random run = %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n", run32[0], run32[1], run32[2], run32[3], run32[4], run32[5], run32[6], run32[7], run32[8], run32[9], run32[10], run32[11], run32[12], run32[13], run32[14], run32[15]);

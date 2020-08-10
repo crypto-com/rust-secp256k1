@@ -1,5 +1,5 @@
 /**********************************************************************
- * Copyright (c) 2018 Andrew Poelstra                                 *
+ * Copyright (c) 2018-2020 Andrew Poelstra, Jonas Nick                *
  * Distributed under the MIT software license, see the accompanying   *
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
@@ -47,14 +47,11 @@ static void rustsecp256k1_v0_1_2_nonce_function_bip340_sha256_tagged_aux(rustsec
  * by using the correct tagged hash function. */
 static const unsigned char bip340_algo16[16] = "BIP340/nonce\0\0\0\0";
 
-static int nonce_function_bip340(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *xonly_pk32, const unsigned char *algo16, void *data, unsigned int counter) {
+static int nonce_function_bip340(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *xonly_pk32, const unsigned char *algo16, void *data) {
     rustsecp256k1_v0_1_2_sha256 sha;
     unsigned char masked_key[32];
     int i;
 
-    if (counter != 0) {
-        return 0;
-    }
     if (algo16 == NULL) {
         return 0;
     }
@@ -74,9 +71,8 @@ static int nonce_function_bip340(unsigned char *nonce32, const unsigned char *ms
     if (memcmp(algo16, bip340_algo16, 16) == 0) {
         rustsecp256k1_v0_1_2_nonce_function_bip340_sha256_tagged(&sha);
     } else {
-        int algo16_len;
+        int algo16_len = 16;
         /* Remove terminating null bytes */
-        algo16_len = 16;
         while (algo16_len > 0 && !algo16[algo16_len - 1]) {
             algo16_len--;
         }
@@ -145,7 +141,7 @@ int rustsecp256k1_v0_1_2_schnorrsig_sign(const rustsecp256k1_v0_1_2_context* ctx
 
     rustsecp256k1_v0_1_2_scalar_get_b32(seckey, &sk);
     rustsecp256k1_v0_1_2_fe_get_b32(pk_buf, &pk.x);
-    ret &= !!noncefp(buf, msg32, seckey, pk_buf, bip340_algo16, (void*)ndata, 0);
+    ret &= !!noncefp(buf, msg32, seckey, pk_buf, bip340_algo16, (void*)ndata);
     rustsecp256k1_v0_1_2_scalar_set_b32(&k, buf, NULL);
     ret &= !rustsecp256k1_v0_1_2_scalar_is_zero(&k);
     rustsecp256k1_v0_1_2_scalar_cmov(&k, &rustsecp256k1_v0_1_2_scalar_one, !ret);

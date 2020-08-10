@@ -12,6 +12,10 @@
 # include "include/rustsecp256k1_v0_1_2_ecdh.h"
 #endif
 
+#if ENABLE_MODULE_RECOVERY
+# include "include/rustsecp256k1_v0_1_2_recovery.h"
+#endif
+
 #if ENABLE_MODULE_EXTRAKEYS
 # include "include/rustsecp256k1_v0_1_2_extrakeys.h"
 #endif
@@ -32,6 +36,10 @@ int main(void) {
     unsigned char key[32];
     unsigned char sig[74];
     unsigned char spubkey[33];
+#if ENABLE_MODULE_RECOVERY
+    rustsecp256k1_v0_1_2_ecdsa_recoverable_signature recoverable_signature;
+    int recid;
+#endif
 #if ENABLE_MODULE_EXTRAKEYS
     rustsecp256k1_v0_1_2_keypair keypair;
 #endif
@@ -78,6 +86,17 @@ int main(void) {
     ret = rustsecp256k1_v0_1_2_ecdh(ctx, msg, &pubkey, key, NULL, NULL);
     VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
     CHECK(ret == 1);
+#endif
+
+#if ENABLE_MODULE_RECOVERY
+    /* Test signing a recoverable signature. */
+    VALGRIND_MAKE_MEM_UNDEFINED(key, 32);
+    ret = rustsecp256k1_v0_1_2_ecdsa_sign_recoverable(ctx, &recoverable_signature, msg, key, NULL, NULL);
+    VALGRIND_MAKE_MEM_DEFINED(&recoverable_signature, sizeof(recoverable_signature));
+    VALGRIND_MAKE_MEM_DEFINED(&ret, sizeof(ret));
+    CHECK(ret);
+    CHECK(rustsecp256k1_v0_1_2_ecdsa_recoverable_signature_serialize_compact(ctx, sig, &recid, &recoverable_signature));
+    CHECK(recid >= 0 && recid <= 3);
 #endif
 
     VALGRIND_MAKE_MEM_UNDEFINED(key, 32);

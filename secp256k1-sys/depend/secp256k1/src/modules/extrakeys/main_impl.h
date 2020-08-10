@@ -70,12 +70,12 @@ int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add(const rustsecp256k1_v0_1_2_conte
     rustsecp256k1_v0_1_2_ge pk;
 
     VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(rustsecp256k1_v0_1_2_ecmult_context_is_built(&ctx->ecmult_ctx));
     ARG_CHECK(output_pubkey != NULL);
+    memset(output_pubkey, 0, sizeof(*output_pubkey));
+    ARG_CHECK(rustsecp256k1_v0_1_2_ecmult_context_is_built(&ctx->ecmult_ctx));
     ARG_CHECK(internal_pubkey != NULL);
     ARG_CHECK(tweak32 != NULL);
 
-    memset(output_pubkey, 0, sizeof(*output_pubkey));
     if (!rustsecp256k1_v0_1_2_xonly_pubkey_load(ctx, &pk, internal_pubkey)
         || !rustsecp256k1_v0_1_2_ec_pubkey_tweak_add_helper(&ctx->ecmult_ctx, &pk, tweak32)) {
         return 0;
@@ -84,7 +84,7 @@ int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add(const rustsecp256k1_v0_1_2_conte
     return 1;
 }
 
-int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add_test(const rustsecp256k1_v0_1_2_context* ctx, const unsigned char *output_pubkey32, int output_pubkey_parity, const rustsecp256k1_v0_1_2_xonly_pubkey *internal_pubkey, const unsigned char *tweak32) {
+int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add_check(const rustsecp256k1_v0_1_2_context* ctx, const unsigned char *output_pubkey32, int output_pubkey_parity, const rustsecp256k1_v0_1_2_xonly_pubkey *internal_pubkey, const unsigned char *tweak32) {
     rustsecp256k1_v0_1_2_ge pk;
     unsigned char pk_expected32[32];
 

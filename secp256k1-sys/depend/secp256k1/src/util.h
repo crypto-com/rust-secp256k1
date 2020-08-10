@@ -69,6 +69,25 @@ static SECP256K1_INLINE void rustsecp256k1_v0_1_2_callback_call(const rustsecp25
 #define VERIFY_SETUP(stmt)
 #endif
 
+/* Define `VG_UNDEF` and `VG_CHECK` when VALGRIND is defined  */
+#if !defined(VG_CHECK)
+# if defined(VALGRIND)
+#  include <valgrind/memcheck.h>
+#  define VG_UNDEF(x,y) VALGRIND_MAKE_MEM_UNDEFINED((x),(y))
+#  define VG_CHECK(x,y) VALGRIND_CHECK_MEM_IS_DEFINED((x),(y))
+# else
+#  define VG_UNDEF(x,y)
+#  define VG_CHECK(x,y)
+# endif
+#endif
+
+/* Like `VG_CHECK` but on VERIFY only */
+#if defined(VERIFY)
+#define VG_CHECK_VERIFY(x,y) VG_CHECK((x), (y))
+#else
+#define VG_CHECK_VERIFY(x,y)
+#endif
+
 #if defined(__BIGGEST_ALIGNMENT__)
 #define ALIGNMENT __BIGGEST_ALIGNMENT__
 #else
@@ -157,6 +176,20 @@ static SECP256K1_INLINE void memczero(void *s, size_t len, int flag) {
         p++;
         len--;
     }
+}
+
+/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized and non-negative.*/
+static SECP256K1_INLINE void rustsecp256k1_v0_1_2_int_cmov(int *r, const int *a, int flag) {
+    unsigned int mask0, mask1, r_masked, a_masked;
+    /* Casting a negative int to unsigned and back to int is implementation defined behavior */
+    VERIFY_CHECK(*r >= 0 && *a >= 0);
+
+    mask0 = (unsigned int)flag + ~0u;
+    mask1 = ~mask0;
+    r_masked = ((unsigned int)*r & mask0);
+    a_masked = ((unsigned int)*a & mask1);
+
+    *r = (int)(r_masked | a_masked);
 }
 
 #endif /* SECP256K1_UTIL_H */

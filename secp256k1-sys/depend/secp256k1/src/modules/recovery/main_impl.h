@@ -122,48 +122,15 @@ static int rustsecp256k1_v0_1_2_ecdsa_sig_recover(const rustsecp256k1_v0_1_2_ecm
 
 int rustsecp256k1_v0_1_2_ecdsa_sign_recoverable(const rustsecp256k1_v0_1_2_context* ctx, rustsecp256k1_v0_1_2_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, rustsecp256k1_v0_1_2_nonce_function noncefp, const void* noncedata) {
     rustsecp256k1_v0_1_2_scalar r, s;
-    rustsecp256k1_v0_1_2_scalar sec, non, msg;
-    int recid;
-    int ret = 0;
-    int overflow = 0;
+    int ret, recid;
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(rustsecp256k1_v0_1_2_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(signature != NULL);
     ARG_CHECK(seckey != NULL);
-    if (noncefp == NULL) {
-        noncefp = rustsecp256k1_v0_1_2_nonce_function_default;
-    }
 
-    rustsecp256k1_v0_1_2_scalar_set_b32(&sec, seckey, &overflow);
-    /* Fail if the secret key is invalid. */
-    if (!overflow && !rustsecp256k1_v0_1_2_scalar_is_zero(&sec)) {
-        unsigned char nonce32[32];
-        unsigned int count = 0;
-        rustsecp256k1_v0_1_2_scalar_set_b32(&msg, msg32, NULL);
-        while (1) {
-            ret = noncefp(nonce32, msg32, seckey, NULL, (void*)noncedata, count);
-            if (!ret) {
-                break;
-            }
-            rustsecp256k1_v0_1_2_scalar_set_b32(&non, nonce32, &overflow);
-            if (!overflow && !rustsecp256k1_v0_1_2_scalar_is_zero(&non)) {
-                if (rustsecp256k1_v0_1_2_ecdsa_sig_sign(&ctx->ecmult_gen_ctx, &r, &s, &sec, &msg, &non, &recid)) {
-                    break;
-                }
-            }
-            count++;
-        }
-        memset(nonce32, 0, 32);
-        rustsecp256k1_v0_1_2_scalar_clear(&msg);
-        rustsecp256k1_v0_1_2_scalar_clear(&non);
-        rustsecp256k1_v0_1_2_scalar_clear(&sec);
-    }
-    if (ret) {
-        rustsecp256k1_v0_1_2_ecdsa_recoverable_signature_save(signature, &r, &s, recid);
-    } else {
-        memset(signature, 0, sizeof(*signature));
-    }
+    ret = rustsecp256k1_v0_1_2_ecdsa_sign_inner(ctx, &r, &s, &recid, msg32, seckey, noncefp, noncedata);
+    rustsecp256k1_v0_1_2_ecdsa_recoverable_signature_save(signature, &r, &s, recid);
     return ret;
 }
 

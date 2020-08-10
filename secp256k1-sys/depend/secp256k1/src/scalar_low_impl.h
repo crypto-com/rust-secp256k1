@@ -116,6 +116,7 @@ SECP256K1_INLINE static int rustsecp256k1_v0_1_2_scalar_eq(const rustsecp256k1_v
 
 static SECP256K1_INLINE void rustsecp256k1_v0_1_2_scalar_cmov(rustsecp256k1_v0_1_2_scalar *r, const rustsecp256k1_v0_1_2_scalar *a, int flag) {
     uint32_t mask0, mask1;
+    VG_CHECK_VERIFY(r, sizeof(*r));
     mask0 = flag + ~((uint32_t)0);
     mask1 = ~mask0;
     *r = (*r & mask0) | (*a & mask1);

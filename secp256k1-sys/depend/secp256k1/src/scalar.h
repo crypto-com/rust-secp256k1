@@ -111,7 +111,7 @@ static void rustsecp256k1_v0_1_2_scalar_split_lambda(rustsecp256k1_v0_1_2_scalar
 /** Multiply a and b (without taking the modulus!), divide by 2**shift, and round to the nearest integer. Shift must be at least 256. */
 static void rustsecp256k1_v0_1_2_scalar_mul_shift_var(rustsecp256k1_v0_1_2_scalar *r, const rustsecp256k1_v0_1_2_scalar *a, const rustsecp256k1_v0_1_2_scalar *b, unsigned int shift);
 
-/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time. */
+/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized.*/
 static void rustsecp256k1_v0_1_2_scalar_cmov(rustsecp256k1_v0_1_2_scalar *r, const rustsecp256k1_v0_1_2_scalar *a, int flag);
 
 #endif /* SECP256K1_SCALAR_H */

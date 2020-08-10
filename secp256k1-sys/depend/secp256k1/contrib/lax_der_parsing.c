@@ -112,7 +112,6 @@ int rustsecp256k1_v0_1_2_ecdsa_signature_parse_der_lax(const rustsecp256k1_v0_1_
         return 0;
     }
     spos = pos;
-    pos += slen;
 
     /* Ignore leading zeroes in R */
     while (rlen > 0 && input[rpos] == 0) {

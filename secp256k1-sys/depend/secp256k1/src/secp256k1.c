@@ -428,18 +428,18 @@ static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *m
 const rustsecp256k1_v0_1_2_nonce_function rustsecp256k1_v0_1_2_nonce_function_rfc6979 = nonce_function_rfc6979;
 const rustsecp256k1_v0_1_2_nonce_function rustsecp256k1_v0_1_2_nonce_function_default = nonce_function_rfc6979;
 
-int rustsecp256k1_v0_1_2_ecdsa_sign(const rustsecp256k1_v0_1_2_context* ctx, rustsecp256k1_v0_1_2_ecdsa_signature *signature, const unsigned char *msg32, const unsigned char *seckey, rustsecp256k1_v0_1_2_nonce_function noncefp, const void* noncedata) {
-    rustsecp256k1_v0_1_2_scalar r, s;
+static int rustsecp256k1_v0_1_2_ecdsa_sign_inner(const rustsecp256k1_v0_1_2_context* ctx, rustsecp256k1_v0_1_2_scalar* r, rustsecp256k1_v0_1_2_scalar* s, int* recid, const unsigned char *msg32, const unsigned char *seckey, rustsecp256k1_v0_1_2_nonce_function noncefp, const void* noncedata) {
     rustsecp256k1_v0_1_2_scalar sec, non, msg;
     int ret = 0;
     int is_sec_valid;
     unsigned char nonce32[32];
     unsigned int count = 0;
-    VERIFY_CHECK(ctx != NULL);
-    ARG_CHECK(rustsecp256k1_v0_1_2_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
-    ARG_CHECK(msg32 != NULL);
-    ARG_CHECK(signature != NULL);
-    ARG_CHECK(seckey != NULL);
+    /* Default initialization here is important so we won't pass uninit values to the cmov in the end */
+    *r = rustsecp256k1_v0_1_2_scalar_zero;
+    *s = rustsecp256k1_v0_1_2_scalar_zero;
+    if (recid) {
+        *recid = 0;
+    }
     if (noncefp == NULL) {
         noncefp = rustsecp256k1_v0_1_2_nonce_function_default;
     }
@@ -458,7 +458,7 @@ int rustsecp256k1_v0_1_2_ecdsa_sign(const rustsecp256k1_v0_1_2_context* ctx, rus
         /* The nonce is still secret here, but it being invalid is is less likely than 1:2^255. */
         rustsecp256k1_v0_1_2_declassify(ctx, &is_nonce_valid, sizeof(is_nonce_valid));
         if (is_nonce_valid) {
-            ret = rustsecp256k1_v0_1_2_ecdsa_sig_sign(&ctx->ecmult_gen_ctx, &r, &s, &sec, &msg, &non, NULL);
+            ret = rustsecp256k1_v0_1_2_ecdsa_sig_sign(&ctx->ecmult_gen_ctx, r, s, &sec, &msg, &non, recid);
             /* The final signature is no longer a secret, nor is the fact that we were successful or not. */
             rustsecp256k1_v0_1_2_declassify(ctx, &ret, sizeof(ret));
             if (ret) {
@@ -475,8 +475,25 @@ int rustsecp256k1_v0_1_2_ecdsa_sign(const rustsecp256k1_v0_1_2_context* ctx, rus
     rustsecp256k1_v0_1_2_scalar_clear(&msg);
     rustsecp256k1_v0_1_2_scalar_clear(&non);
     rustsecp256k1_v0_1_2_scalar_clear(&sec);
-    rustsecp256k1_v0_1_2_scalar_cmov(&r, &rustsecp256k1_v0_1_2_scalar_zero, !ret);
-    rustsecp256k1_v0_1_2_scalar_cmov(&s, &rustsecp256k1_v0_1_2_scalar_zero, !ret);
+    rustsecp256k1_v0_1_2_scalar_cmov(r, &rustsecp256k1_v0_1_2_scalar_zero, !ret);
+    rustsecp256k1_v0_1_2_scalar_cmov(s, &rustsecp256k1_v0_1_2_scalar_zero, !ret);
+    if (recid) {
+        const int zero = 0;
+        rustsecp256k1_v0_1_2_int_cmov(recid, &zero, !ret);
+    }
+    return ret;
+}
+
+int rustsecp256k1_v0_1_2_ecdsa_sign(const rustsecp256k1_v0_1_2_context* ctx, rustsecp256k1_v0_1_2_ecdsa_signature *signature, const unsigned char *msg32, const unsigned char *seckey, rustsecp256k1_v0_1_2_nonce_function noncefp, const void* noncedata) {
+    rustsecp256k1_v0_1_2_scalar r, s;
+    int ret;
+    VERIFY_CHECK(ctx != NULL);
+    ARG_CHECK(rustsecp256k1_v0_1_2_ecmult_gen_context_is_built(&ctx->ecmult_gen_ctx));
+    ARG_CHECK(msg32 != NULL);
+    ARG_CHECK(signature != NULL);
+    ARG_CHECK(seckey != NULL);
+
+    ret = rustsecp256k1_v0_1_2_ecdsa_sign_inner(ctx, &r, &s, NULL, msg32, seckey, noncefp, noncedata);
     rustsecp256k1_v0_1_2_ecdsa_signature_save(signature, &r, &s);
     return ret;
 }

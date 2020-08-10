@@ -1097,6 +1097,7 @@ static void rustsecp256k1_v0_1_2_fe_sqr(rustsecp256k1_v0_1_2_fe *r, const rustse
 
 static SECP256K1_INLINE void rustsecp256k1_v0_1_2_fe_cmov(rustsecp256k1_v0_1_2_fe *r, const rustsecp256k1_v0_1_2_fe *a, int flag) {
     uint32_t mask0, mask1;
+    VG_CHECK_VERIFY(r->n, sizeof(r->n));
     mask0 = flag + ~((uint32_t)0);
     mask1 = ~mask0;
     r->n[0] = (r->n[0] & mask0) | (a->n[0] & mask1);
@@ -1119,6 +1120,7 @@ static SECP256K1_INLINE void rustsecp256k1_v0_1_2_fe_cmov(rustsecp256k1_v0_1_2_f
 
 static SECP256K1_INLINE void rustsecp256k1_v0_1_2_fe_storage_cmov(rustsecp256k1_v0_1_2_fe_storage *r, const rustsecp256k1_v0_1_2_fe_storage *a, int flag) {
     uint32_t mask0, mask1;
+    VG_CHECK_VERIFY(r->n, sizeof(r->n));
     mask0 = flag + ~((uint32_t)0);
     mask1 = ~mask0;
     r->n[0] = (r->n[0] & mask0) | (a->n[0] & mask1);

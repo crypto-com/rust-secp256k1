@@ -89,8 +89,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_1_2_xonly_pubkey
 
 /** Tweak an x-only public key by adding tweak times the generator to it.
  *
- *  Note that because the resulting point may have an odd Y coordinate, it can
- *  not be represented by an x-only pubkey. Instead, the output_pubkey is a
+ *  Note that the resulting point can not be represented by an x-only pubkey
+ *  because it may have an odd Y coordinate. Instead, the output_pubkey is a
  *  normal rustsecp256k1_v0_1_2_pubkey.
  *
  *  Returns: 0 if the arguments are invalid or the resulting public key would be
@@ -99,10 +99,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_1_2_xonly_pubkey
  *
  *  Args:           ctx: pointer to a context object initialized for validation
  *                       (cannot be NULL)
- *  Out:  output_pubkey: pointer to a public key to store the result (cannot be
- *                       NULL)
- *  In: internal_pubkey: pointer to an x-only pubkey to apply the tweak to. Will
- *                       be set to an invalid value if this function returns 0
+ *  Out:  output_pubkey: pointer to a public key to store the result. Will be set
+ *                       to an invalid value if this function returns 0 (cannot
+ *                       be NULL)
+ *  In: internal_pubkey: pointer to an x-only pubkey to apply the tweak to.
  *                       (cannot be NULL).
  *              tweak32: pointer to a 32-byte tweak. If the tweak is invalid
  *                       according to rustsecp256k1_v0_1_2_ec_seckey_verify, this function
@@ -115,32 +115,34 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_1_2_xonly_pubkey
     rustsecp256k1_v0_1_2_pubkey *output_pubkey,
     const rustsecp256k1_v0_1_2_xonly_pubkey *internal_pubkey,
     const unsigned char *tweak32
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
-/** Tests that output_pubkey is the result of calling
+/** Checks that an output pubkey is the result of calling
  *  rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add with internal_pubkey and tweak32.
  *
- *  The output_pubkey is represented by its 32-byte x-only serialization and its
+ *  The output pubkey is represented by its 32-byte x-only serialization and its
  *  pk_parity, which can both be obtained by converting the result of tweak_add
  *  to a rustsecp256k1_v0_1_2_xonly_pubkey.
  *
- *  Note that this alone does _not_ verify that output_pubkey is a commitment.
- *  If the tweak is not chosen in a specific way, the output_pubkey can easily
+ *  Note that this alone does _not_ verify that output pubkey is a commitment.
+ *  If the tweak is not chosen in a specific way, the output pubkey can easily
  *  be the result of a different internal_pubkey and tweak.
  *
- *  Returns: 0 if the arguments are invalid or the output_pubkey is not the
+ *  Returns: 0 if the arguments are invalid or the output pubkey is not the
  *           result of tweaking the internal_pubkey with tweak32. 1 otherwise.
  *  Args:           ctx: pointer to a context object initialized for validation
  *                       (cannot be NULL)
  *  In: output_pubkey32: pointer to a serialized xonly_pubkey (cannot be NULL)
- *     output_pk_parity: the pk_parity value that is returned when
- *                       converting the output_pubkey of
- *                       rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add to an xonly_pubkey
+ *     output_pk_parity: the parity of the output pubkey (whose serialization is
+ *                       passed in as output_pubkey32). This must match the
+ *                       pk_parity value that is returned when calling
+ *                       rustsecp256k1_v0_1_2_xonly_pubkey with the output pubkey, or this
+ *                       function will fail.
  *      internal_pubkey: pointer to an x-only public key object to apply the
  *                       tweak to (cannot be NULL)
  *              tweak32: pointer to a 32-byte tweak (cannot be NULL)
  */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add_test(
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_1_2_xonly_pubkey_tweak_add_check(
     const rustsecp256k1_v0_1_2_context* ctx,
     const unsigned char *output_pubkey32,
     int output_pk_parity,
